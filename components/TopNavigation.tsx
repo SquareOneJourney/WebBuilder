@@ -20,7 +20,8 @@ import {
   Eye,
   EyeOff,
   Copy,
-  Clipboard
+  Clipboard,
+  Trash2
 } from 'lucide-react';
 
 interface TopNavigationProps {
@@ -46,6 +47,7 @@ interface TopNavigationProps {
   onElementPaste?: () => void;
   hasClipboardData?: boolean;
   selectedElement?: any;
+  onElementDelete?: () => void;
 }
 
 export default function TopNavigation({
@@ -70,7 +72,8 @@ export default function TopNavigation({
   onElementCopy,
   onElementPaste,
   hasClipboardData = false,
-  selectedElement
+  selectedElement,
+  onElementDelete
 }: TopNavigationProps) {
   return (
     <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
@@ -143,26 +146,16 @@ export default function TopNavigation({
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-2">
           <button
-            onClick={onToggleGrid}
+            onClick={onElementDelete}
+            disabled={!selectedElement}
             className={`p-2 rounded-md transition-colors ${
-              showGrid 
-                ? 'bg-blue-100 text-blue-700' 
-                : 'hover:bg-gray-100 text-gray-600'
+              selectedElement
+                ? 'hover:bg-red-100 text-red-600 hover:text-red-700'
+                : 'opacity-50 cursor-not-allowed text-gray-400'
             }`}
-            title="Toggle Grid (Ctrl+G)"
+            title={selectedElement ? "Delete Selected Element (Delete)" : "No element selected"}
           >
-            {showGrid ? <Grid className="w-4 h-4" /> : <Grid className="w-4 h-4" />}
-          </button>
-          <button
-            onClick={onToggleRulers}
-            className={`p-2 rounded-md transition-colors ${
-              showRulers 
-                ? 'bg-blue-100 text-blue-700' 
-                : 'hover:bg-gray-100 text-gray-600'
-            }`}
-            title="Toggle Rulers (Ctrl+R)"
-          >
-            <Ruler className="w-4 h-4" />
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
 

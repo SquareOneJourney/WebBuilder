@@ -5,6 +5,7 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import TopNavigation from '@/components/TopNavigation';
 import SidePanel from '@/components/SidePanel';
+import RightPanel from '@/components/RightPanel';
 import FlowchartBuilder from '@/components/FlowchartBuilder';
 import TemplateShowcase from '@/components/TemplateShowcase';
 import WebpageBuilder from '@/components/WebpageBuilder';
@@ -13,6 +14,7 @@ import { tools, getToolById } from '@/lib/tools';
 import { templates, getTemplateById } from '@/lib/templates';
 import { keyboardShortcuts, getShortcutsByKey } from '@/lib/shortcuts';
 import { exportProject } from '@/lib/export';
+import { Section } from '@/lib/sections';
 import { 
   Layout, 
   GitBranch, 
@@ -559,6 +561,48 @@ export default function MainPage() {
     }
   }, [canvasState, addToHistory]);
 
+  const handleSectionAdd = useCallback((section: Section) => {
+    const newSectionId = `section-${Date.now()}`;
+    
+    // Calculate the starting Y position for the new section
+    // Find the maximum Y position of all existing elements
+    const maxY = canvasState.elements.length > 0 
+      ? Math.max(...canvasState.elements.map(el => el.y + el.height))
+      : 0;
+    
+    // Add some spacing between sections, but cap it at a reasonable maximum
+    const sectionStartY = Math.min(maxY + 100, 2000); // Cap at 2000px to prevent sections from being too far down
+    
+    console.log('Adding section:', section.name);
+    console.log('Existing elements:', canvasState.elements.length);
+    console.log('Max Y position:', maxY);
+    console.log('Section start Y:', sectionStartY);
+    
+    const newElements = section.elements.map((element, index) => {
+      const newY = sectionStartY + element.y;
+      console.log(`Element ${element.id}: original y=${element.y}, new y=${newY}`);
+      
+      return {
+        ...element,
+        id: `${newSectionId}-${element.id}`,
+        x: element.x || 0, // Keep original x positioning
+        y: newY, // Use the element's original y position relative to section start
+        zIndex: (canvasState.elements.length + index + 1), // Ensure proper z-index
+        metadata: {
+          ...element.metadata,
+          sectionId: newSectionId
+        }
+      };
+    });
+
+    const newState = {
+      ...canvasState,
+      elements: [...canvasState.elements, ...newElements],
+    };
+    setCanvasState(newState);
+    addToHistory(newState);
+  }, [canvasState, addToHistory]);
+
   const handleElementCopy = useCallback((id: string) => {
     const element = canvasState.elements.find(el => el.id === id);
     if (element) {
@@ -722,7 +766,7 @@ export default function MainPage() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="h-screen flex flex-col bg-gray-100">
+      <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
         {/* Tab Navigation */}
         <div className="bg-white border-b border-gray-200 px-4 py-2">
           <div className="flex space-x-1">
@@ -772,15 +816,22 @@ export default function MainPage() {
           onElementPaste={handleElementPaste}
           hasClipboardData={hasClipboardData}
           selectedElement={canvasState.elements.find(el => el.id === canvasState.selectedElementId)}
+          onElementDelete={() => {
+            if (canvasState.selectedElementId) {
+              handleElementDelete(canvasState.selectedElementId);
+            }
+          }}
         />
         
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden min-w-0">
           {activeTab === 'webpage' ? (
             <>
-              <SidePanel
+              <div className="hidden md:block">
+                <SidePanel
                 selectedTool={selectedTool}
                 onToolSelect={handleToolSelect}
                 onElementAdd={handleElementAdd}
+                onSectionAdd={handleSectionAdd}
                 selectedElement={canvasState.elements.find(el => el.id === canvasState.selectedElementId) || null}
                 onElementUpdate={handleElementUpdate}
                 onElementDelete={handleElementDelete}
@@ -790,19 +841,28 @@ export default function MainPage() {
                 canvasState={canvasState}
                 onCanvasStateUpdate={setCanvasState}
               />
-              <WebpageBuilder
-                elements={canvasState.elements}
-                onElementsUpdate={(elements) => {
-                  setCanvasState(prev => ({ ...prev, elements }));
-                  addToHistory({ ...canvasState, elements });
-                }}
-                selectedElementId={canvasState.selectedElementId}
-                onElementSelect={handleElementSelect}
-                onElementAdd={handleElementAddDrop}
-                onElementUpdate={handleElementUpdate}
-                onElementMove={handleElementMove}
-                onElementResize={handleElementResize}
-              />
+              </div>
+              <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                <WebpageBuilder
+                  elements={canvasState.elements}
+                  onElementsUpdate={(elements) => {
+                    setCanvasState(prev => ({ ...prev, elements }));
+                    addToHistory({ ...canvasState, elements });
+                  }}
+                  selectedElementId={canvasState.selectedElementId}
+                  onElementSelect={handleElementSelect}
+                  onElementAdd={handleElementAddDrop}
+                  onElementUpdate={handleElementUpdate}
+                  onElementMove={handleElementMove}
+                  onElementResize={handleElementResize}
+                />
+              </div>
+              <div className="hidden lg:block">
+                <RightPanel
+                  selectedElement={canvasState.elements.find(el => el.id === canvasState.selectedElementId) || null}
+                  onElementUpdate={handleElementUpdate}
+                />
+              </div>
             </>
           ) : (
             <FlowchartBuilder

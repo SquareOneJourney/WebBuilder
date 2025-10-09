@@ -96,7 +96,7 @@ export const HeroElement = ({ content, styles, onUpdate, isEditing }: any) => {
           backgroundPosition: 'center'
         }}
       >
-        <div className="max-w-4xl mx-auto">
+        <div className="w-full max-w-full">
           {content.title && (
             <h1 className="text-5xl font-bold mb-6">
               {content.title}

@@ -79,10 +79,6 @@ export default function WebpageBuilder({
     if (snapToGrid) {
       finalX = Math.round(x / gridSize) * gridSize;
       finalY = Math.round(y / gridSize) * gridSize;
-    } else {
-      // Smart snapping to other elements
-      finalX = getSnapPosition(x, elements, id, element.width, 'x', 8);
-      finalY = getSnapPosition(y, elements, id, element.height, 'y', 8);
     }
 
     onElementMove(id, finalX, finalY);
@@ -191,7 +187,7 @@ export default function WebpageBuilder({
   }, [drop]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-50 relative">
+    <div className="flex-1 flex flex-col h-full bg-gray-50 relative max-w-full overflow-hidden">
       {/* Alignment Toolbar */}
       <AlignmentToolbar
         selectedCount={selectedElementIds.length}
@@ -229,7 +225,12 @@ export default function WebpageBuilder({
         )}
 
         {/* Canvas Content Area */}
-        <div className="relative w-full bg-white" style={{ minHeight: '100vh', minWidth: '100%' }}>
+        <div className="relative w-full bg-white mx-auto" style={{ 
+          minHeight: '100vh', 
+          minWidth: '100%',
+          maxWidth: '100%',
+          width: '100%'
+        }}>
           {/* Empty State */}
           {elements.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

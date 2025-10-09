@@ -9,11 +9,9 @@ import {
   Image, 
   Search, 
   MousePointer, 
-  Palette,
   Settings,
   Layout,
   Navigation,
-  Zap,
   Hash,
   AlignLeft,
   Play,
@@ -48,14 +46,14 @@ import {
 } from 'lucide-react';
 import { Tool, Element, CanvasState } from '@/types';
 import { tools, getToolsByCategory, toolCategories, searchTools } from '@/lib/tools';
-import StylePanel from './StylePanel';
-import AnimationPanel from './AnimationPanel';
-import FlowchartPanel from './FlowchartPanel';
+import SectionsLibrary from './SectionsLibrary';
+import { sections, Section } from '@/lib/sections';
 
 interface SidePanelProps {
   selectedTool: string;
   onToolSelect: (toolId: string) => void;
   onElementAdd: (type: Tool['type']) => void;
+  onSectionAdd: (section: Section) => void;
   selectedElement: Element | null;
   onElementUpdate: (id: string, updates: Partial<Element>) => void;
   onElementDelete: (id: string) => void;
@@ -112,7 +110,8 @@ const iconMap: Record<string, any> = {
 export default function SidePanel({ 
   selectedTool, 
   onToolSelect, 
-  onElementAdd, 
+  onElementAdd,
+  onSectionAdd,
   selectedElement, 
   onElementUpdate,
   onElementDelete,
@@ -122,7 +121,7 @@ export default function SidePanel({
   canvasState,
   onCanvasStateUpdate
 }: SidePanelProps) {
-  const [activeTab, setActiveTab] = useState<'elements' | 'styles' | 'animations' | 'layers'>('elements');
+  const [activeTab, setActiveTab] = useState<'sections' | 'elements'>('sections');
   const [selectedCategory, setSelectedCategory] = useState<string>('basic');
   const [searchQuery, setSearchQuery] = useState('');
   const [hasClipboardData, setHasClipboardData] = useState(false);
@@ -237,6 +236,10 @@ export default function SidePanel({
     }
   };
 
+  const renderSectionsTab = () => (
+    <SectionsLibrary onSectionAdd={onSectionAdd} />
+  );
+
   const renderElementsTab = () => (
     <div className="space-y-4">
       {/* Selected Element Info */}
@@ -292,138 +295,16 @@ export default function SidePanel({
     </div>
   );
 
-  const renderStylesTab = () => {
-    if (selectedElement?.type === 'flowchart') {
-      return <FlowchartPanel selectedElement={selectedElement} onElementUpdate={onElementUpdate} />;
-    }
-    
-    return (
-      <StylePanel 
-        selectedElement={selectedElement} 
-        onElementUpdate={onElementUpdate}
-      />
-    );
-  };
 
-  const renderAnimationsTab = () => (
-    <AnimationPanel 
-      selectedElement={selectedElement} 
-      onElementUpdate={onElementUpdate} 
-    />
-  );
 
-  const renderLayersTab = () => (
-    <div className="space-y-2">
-      <div className="px-4 py-2 border-b border-gray-200">
-        <h3 className="text-sm font-medium text-gray-700">Layers</h3>
-      </div>
-      
-      <div className="px-4">
-        {canvasState.elements.length === 0 ? (
-          <div className="text-sm text-gray-500 text-center py-8">
-            No elements added yet
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {canvasState.elements
-              .sort((a, b) => b.zIndex - a.zIndex)
-              .map((element) => (
-                <div
-                  key={element.id}
-                  className={`flex items-center justify-between p-2 rounded-md group hover:bg-gray-50 ${
-                    canvasState.selectedElementId === element.id
-                      ? 'bg-blue-50 border border-blue-200'
-                      : 'border border-transparent'
-                  }`}
-                  onClick={() => onToolSelect('select')}
-                >
-                  <div className="flex items-center space-x-2 flex-1 min-w-0">
-                    <div className="w-4 h-4 bg-gray-300 rounded flex-shrink-0" />
-                    <span className="text-sm font-medium text-gray-900 truncate">
-                      {element.metadata?.name || `${element.type} ${element.id.slice(-4)}`}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {element.type}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleElementAction('toggleVisibility', element.id);
-                      }}
-                      className="p-1 hover:bg-gray-200 rounded"
-                      title="Toggle visibility"
-                    >
-                      {element.styles.opacity === 0 ? (
-                        <EyeOff className="w-3 h-3" />
-                      ) : (
-                        <Eye className="w-3 h-3" />
-                      )}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleElementAction('toggleLock', element.id);
-                      }}
-                      className="p-1 hover:bg-gray-200 rounded"
-                      title="Toggle lock"
-                    >
-                      {element.constraints?.lockPosition ? (
-                        <Lock className="w-3 h-3" />
-                      ) : (
-                        <Unlock className="w-3 h-3" />
-                      )}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleElementAction('copy', element.id);
-                      }}
-                      className="p-1 hover:bg-gray-200 rounded"
-                      title="Copy element"
-                    >
-                      <Copy className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleElementAction('duplicate', element.id);
-                      }}
-                      className="p-1 hover:bg-gray-200 rounded"
-                      title="Duplicate"
-                    >
-                      <Square className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleElementAction('delete', element.id);
-                      }}
-                      className="p-1 hover:bg-red-100 text-red-600 rounded"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+    <div className="w-80 lg:w-96 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
       <div className="p-4 border-b border-gray-200">
         <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
           {[
-            { id: 'elements', label: 'Elements', icon: Layout },
-            { id: 'styles', label: 'Styles', icon: Palette },
-            { id: 'animations', label: 'Animate', icon: Zap },
-            { id: 'layers', label: 'Layers', icon: Settings },
+            { id: 'sections', label: 'Sections', icon: Layout },
+            { id: 'elements', label: 'Elements', icon: Square },
           ].map((tab) => {
             const IconComponent = tab.icon;
             return (
@@ -445,10 +326,8 @@ export default function SidePanel({
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {activeTab === 'sections' && renderSectionsTab()}
         {activeTab === 'elements' && renderElementsTab()}
-        {activeTab === 'styles' && renderStylesTab()}
-        {activeTab === 'animations' && renderAnimationsTab()}
-        {activeTab === 'layers' && renderLayersTab()}
       </div>
     </div>
   );

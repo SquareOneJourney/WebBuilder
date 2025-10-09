@@ -90,8 +90,8 @@ export default function CanvasElement({
       if (!canvasRect) return;
 
       if (isDragging) {
-        const newX = Math.max(0, Math.min(e.clientX - dragStart.x, canvasRect.width - element.width));
-        const newY = Math.max(0, Math.min(e.clientY - dragStart.y, canvasRect.height - element.height));
+        const newX = Math.max(0, e.clientX - dragStart.x);
+        const newY = Math.max(0, e.clientY - dragStart.y);
         onMove(element.id, newX, newY);
       }
 
