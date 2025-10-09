@@ -262,16 +262,29 @@ export default function CanvasElement({
     { position: 'w', cursor: 'w-resize', className: 'top-1/2 left-0 -translate-x-1/2 -translate-y-1/2' },
   ];
 
+  // Build animation classes
+  const animationClasses = [];
+  if (element.styles.animation && element.styles.animation !== 'none') {
+    animationClasses.push(`animate-${element.styles.animation}`);
+  }
+  if (element.styles.hoverAnimation && element.styles.hoverAnimation !== 'none') {
+    animationClasses.push(`hover-${element.styles.hoverAnimation}`);
+  }
+
   return (
     <div
       ref={elementRef}
-      className={`absolute group ${!element.constraints?.lockPosition ? 'cursor-move' : 'cursor-not-allowed'}`}
+      data-element-id={element.id}
+      className={`absolute group ${!element.constraints?.lockPosition ? 'cursor-move' : 'cursor-not-allowed'} ${animationClasses.join(' ')}`}
       style={{
         left: `${element.x}px`,
         top: `${element.y}px`,
         width: `${element.width}px`,
         height: `${element.height}px`,
         zIndex: element.zIndex || 1,
+        animation: element.styles.animation && element.styles.animation !== 'none'
+          ? `${element.styles.animation} ${element.styles.animationDuration || '0.5s'} ease-out`
+          : undefined,
       }}
       onMouseDown={handleMouseDown}
       onClick={(e) => {
