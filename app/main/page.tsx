@@ -776,15 +776,34 @@ export default function MainPage() {
         
         <div className="flex flex-1 overflow-hidden">
           {activeTab === 'webpage' ? (
-            <WebpageBuilder
-              elements={canvasState.elements}
-              onElementsUpdate={(elements) => {
-                setCanvasState(prev => ({ ...prev, elements }));
-                addToHistory({ ...canvasState, elements });
-              }}
-              selectedElementId={canvasState.selectedElementId}
-              onElementSelect={handleElementSelect}
-            />
+            <>
+              <SidePanel
+                selectedTool={selectedTool}
+                onToolSelect={handleToolSelect}
+                onElementAdd={handleElementAdd}
+                selectedElement={canvasState.elements.find(el => el.id === canvasState.selectedElementId) || null}
+                onElementUpdate={handleElementUpdate}
+                onElementDelete={handleElementDelete}
+                onElementDuplicate={handleElementDuplicate}
+                onElementCopy={handleElementCopy}
+                onElementPaste={handleElementPaste}
+                canvasState={canvasState}
+                onCanvasStateUpdate={setCanvasState}
+              />
+              <WebpageBuilder
+                elements={canvasState.elements}
+                onElementsUpdate={(elements) => {
+                  setCanvasState(prev => ({ ...prev, elements }));
+                  addToHistory({ ...canvasState, elements });
+                }}
+                selectedElementId={canvasState.selectedElementId}
+                onElementSelect={handleElementSelect}
+                onElementAdd={handleElementAddDrop}
+                onElementUpdate={handleElementUpdate}
+                onElementMove={handleElementMove}
+                onElementResize={handleElementResize}
+              />
+            </>
           ) : (
             <FlowchartBuilder
               flowchartState={flowchartState}
