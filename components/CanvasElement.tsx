@@ -23,7 +23,11 @@ import {
   ListElement,
   TableElement,
   ChartElement,
-  TimelineElement
+  TimelineElement,
+  BreadcrumbElement,
+  DividerElement,
+  ContainerElement,
+  SpacerElement
 } from './elements/ContentElements';
 
 interface CanvasElementProps {
@@ -230,9 +234,18 @@ export default function CanvasElement({
       case 'timeline':
         return <TimelineElement content={element.content || {}} styles={element.styles} onUpdate={onUpdate} isEditing={isSelected} />;
 
-      case 'container':
-      case 'spacer':
+      case 'breadcrumb':
+        return <BreadcrumbElement content={element.content || {}} styles={element.styles} onUpdate={onUpdate} isEditing={isSelected} />;
+
       case 'divider':
+        return <DividerElement content={element.content || {}} styles={element.styles} onUpdate={onUpdate} isEditing={isSelected} />;
+
+      case 'container':
+        return <ContainerElement content={element.content || {}} styles={element.styles} onUpdate={onUpdate} isEditing={isSelected} />;
+
+      case 'spacer':
+        return <SpacerElement content={element.content || {}} styles={element.styles} onUpdate={onUpdate} isEditing={isSelected} />;
+
       case 'header':
       case 'footer':
       case 'sidebar':

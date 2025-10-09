@@ -49,7 +49,6 @@ const hoverAnimations = [
 
 export default function AnimationPanel({ selectedElement, onElementUpdate }: AnimationPanelProps) {
   const [activeTab, setActiveTab] = useState<'entrance' | 'hover'>('entrance');
-  const [isPreviewing, setIsPreviewing] = useState(false);
 
   if (!selectedElement) {
     return (
@@ -77,48 +76,6 @@ export default function AnimationPanel({ selectedElement, onElementUpdate }: Ani
     onElementUpdate(selectedElement.id, updates);
   };
 
-  const handlePreviewAnimation = () => {
-    if (!selectedElement.styles.animation) {
-      console.warn('No animation selected for preview');
-      return;
-    }
-    
-    setIsPreviewing(true);
-    
-    // Find the element and force animation replay
-    const element = document.querySelector(`[data-element-id="${selectedElement.id}"]`) as HTMLElement;
-    console.log('Preview animation - Element found:', element, 'Animation:', selectedElement.styles.animation);
-    
-    if (element) {
-      const animationName = selectedElement.styles.animation;
-      const duration = selectedElement.styles.animationDuration || '0.5s';
-      
-      // Store original animation style
-      const originalAnimation = element.style.animation;
-      
-      // Apply animation directly via inline style
-      element.style.animation = `none`;
-      
-      // Force a reflow
-      element.offsetHeight;
-      
-      // Apply the animation
-      setTimeout(() => {
-        element.style.animation = `${animationName} ${duration} ease-out`;
-        console.log('Animation applied:', `${animationName} ${duration} ease-out`);
-        
-        // Reset after animation completes
-        const durationMs = parseFloat(duration.replace('s', '')) * 1000;
-        setTimeout(() => {
-          element.style.animation = originalAnimation;
-          setIsPreviewing(false);
-        }, durationMs + 100);
-      }, 50);
-    } else {
-      console.warn('Element not found for preview:', selectedElement.id);
-      setIsPreviewing(false);
-    }
-  };
 
 
   const currentAnimation = selectedElement.styles.animation || 'none';
@@ -256,27 +213,6 @@ export default function AnimationPanel({ selectedElement, onElementUpdate }: Ani
         </div>
       </div>
 
-      {selectedElement.styles.animation && selectedElement.styles.animation !== 'none' && (
-        <div className="pt-4 border-t border-gray-200">
-          <button
-            onClick={handlePreviewAnimation}
-            disabled={isPreviewing}
-            className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center"
-          >
-            {isPreviewing ? (
-              <>
-                <Activity className="w-4 h-4 mr-2 animate-spin" />
-                Previewing...
-              </>
-            ) : (
-              <>
-                <Eye className="w-4 h-4 mr-2" />
-                Preview Animation
-              </>
-            )}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

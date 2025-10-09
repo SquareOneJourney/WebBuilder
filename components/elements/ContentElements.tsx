@@ -824,3 +824,53 @@ export const TimelineElement = ({ content, styles, onUpdate, isEditing }: any) =
     </div>
   );
 };
+
+
+// Breadcrumb Component
+export const BreadcrumbElement = ({ content, styles, onUpdate, isEditing }: any) => {
+  const items = content.items || [
+    { label: "Home", href: "/" },
+    { label: "Products", href: "/products" },
+    { label: "Current Page", href: "#" }
+  ];
+
+  return (
+    <div className="relative group flex items-center" style={styles}>
+      <nav className="flex items-center space-x-2 text-sm">
+        {items.map((item: any, index: number) => (
+          <React.Fragment key={index}>
+            {index > 0 && <ChevronRight className="w-4 h-4 text-gray-400" />}
+            <span
+              className={index === items.length - 1 ? "text-gray-900 font-medium" : "text-blue-600 hover:text-blue-800 cursor-pointer"}
+            >
+              {item.label}
+            </span>
+          </React.Fragment>
+        ))}
+      </nav>
+    </div>
+  );
+};
+
+// Divider Component
+export const DividerElement = ({ content, styles }: any) => {
+  return (
+    <div className="w-full h-full flex items-center justify-center" style={styles}>
+      <div className="w-full h-px" style={{ backgroundColor: styles.color || "#e5e7eb" }} />
+    </div>
+  );
+};
+
+// Container/Spacer Component
+export const ContainerElement = ({ content, styles }: any) => {
+  return (
+    <div className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-50" style={styles}>
+      <span className="text-gray-400 text-sm">Container</span>
+    </div>
+  );
+};
+
+export const SpacerElement = ({ content, styles }: any) => {
+  return <div className="w-full h-full" style={{...styles, backgroundColor: "transparent"}} />;
+};
+

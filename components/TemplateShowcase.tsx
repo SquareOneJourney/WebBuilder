@@ -14,7 +14,8 @@ export default function TemplateShowcase({ onTemplateSelect, onClose }: Template
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'name'>('newest');
 
-  const filteredTemplates = getTemplatesByCategory(selectedCategory).filter(template => {
+  const filteredTemplates = (selectedCategory === 'all' ? templates : getTemplatesByCategory(selectedCategory)).filter(template => {
+    if (!searchQuery) return true;
     const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          template.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          template.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
