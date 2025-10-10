@@ -212,114 +212,6 @@ export default function SidebarLayoutPage() {
     return () => clearTimeout(timeoutId);
   }, [flowchartState]);
 
-  const handleShortcut = (action: string) => {
-    switch (action) {
-      case 'save':
-        handleSave();
-        break;
-      case 'export':
-        handleExport();
-        break;
-      case 'undo':
-        handleUndo();
-        break;
-      case 'redo':
-        handleRedo();
-        break;
-      case 'zoomIn':
-        handleZoomIn();
-        break;
-      case 'zoomOut':
-        handleZoomOut();
-        break;
-      case 'resetZoom':
-        handleReset();
-        break;
-      case 'toggleGrid':
-        if (activeTab === 'webpage') {
-          setCanvasState(prev => ({
-            ...prev,
-            settings: { ...prev.settings, showGrid: !prev.settings.showGrid }
-          }));
-        } else {
-          setFlowchartState(prev => ({
-            ...prev,
-            showGrid: !prev.showGrid
-          }));
-        }
-        break;
-      case 'toggleRulers':
-        setCanvasState(prev => ({
-          ...prev,
-          settings: { ...prev.settings, showRulers: !prev.settings.showRulers }
-        }));
-        break;
-      case 'selectTool':
-        setSelectedTool('select');
-        break;
-      case 'textTool':
-        setSelectedTool('text');
-        break;
-      case 'buttonTool':
-        setSelectedTool('button');
-        break;
-      case 'imageTool':
-        setSelectedTool('image');
-        break;
-      case 'shapeTool':
-        setSelectedTool('rectangle');
-        break;
-      case 'showShortcuts':
-        setShowShortcuts(true);
-        break;
-      case 'deselect':
-        if (activeTab === 'webpage') {
-          setCanvasState(prev => ({ ...prev, selectedElementId: null }));
-        } else {
-          setFlowchartState(prev => ({ 
-            ...prev, 
-            selectedNodeId: null, 
-            selectedConnectionId: null 
-          }));
-        }
-        break;
-      case 'delete':
-        if (activeTab === 'webpage' && canvasState.selectedElementId) {
-          handleElementDelete(canvasState.selectedElementId);
-        }
-        break;
-      case 'duplicate':
-        if (activeTab === 'webpage' && canvasState.selectedElementId) {
-          handleElementDuplicate(canvasState.selectedElementId);
-        }
-        break;
-      case 'copy':
-        if (activeTab === 'webpage' && canvasState.selectedElementId) {
-          handleElementCopy(canvasState.selectedElementId);
-        }
-        break;
-      case 'paste':
-        if (activeTab === 'webpage') {
-          handleElementPaste();
-        }
-        break;
-      case 'selectAll':
-        if (activeTab === 'webpage') {
-          handleSelectAll();
-        }
-        break;
-      case 'desktopView':
-        setCanvasState(prev => ({ ...prev, viewport: 'desktop' }));
-        break;
-      case 'tabletView':
-        setCanvasState(prev => ({ ...prev, viewport: 'tablet' }));
-        break;
-      case 'mobileView':
-        setCanvasState(prev => ({ ...prev, viewport: 'mobile' }));
-        break;
-    }
-  };
-
   const addToHistory = useCallback((newState: CanvasState) => {
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newState);
@@ -407,41 +299,30 @@ export default function SidebarLayoutPage() {
   // Sub-Flowchart Navigation Handlers
   const handleNavigateToSubFlowchart = useCallback((nodeId: string) => {
     const node = flowchartState.nodes.find(n => n.id === nodeId);
-    if (node?.subFlowchart) {
-      // Save current main flowchart state if not already saved
-      if (!isInSubFlowchart) {
-        setMainFlowchartState(flowchartState);
-      }
-      
-      setCurrentFlowchartPath(prev => [...prev, node.label]);
-      setIsInSubFlowchart(true);
-      setCurrentSubFlowchartNodeId(nodeId);
-      
-      // Switch to the sub-flowchart data
-      setFlowchartState({
-        nodes: node.subFlowchart.nodes,
-        connections: node.subFlowchart.connections,
-        selectedNodeId: null,
-        selectedConnectionId: null,
-        zoom: 1,
-        gridSize: 20,
-        snapToGrid: true,
-        showGrid: true,
-        theme: 'light'
-      });
+    if (!node?.subFlowchart) {
+      return;
     }
-  }, [flowchartState.nodes, isInSubFlowchart]);
 
-  const handleNavigateBack = useCallback(() => {
-    if (currentFlowchartPath.length > 1) {
-      // Navigate back to parent flowchart
-      setCurrentFlowchartPath(prev => prev.slice(0, -1));
-      // For now, just go back to main flowchart
-      handleNavigateToMain();
-    } else {
-      handleNavigateToMain();
+    if (!isInSubFlowchart) {
+      setMainFlowchartState(flowchartState);
     }
-  }, [currentFlowchartPath]);
+
+    setCurrentFlowchartPath(prev => [...prev, node.label]);
+    setIsInSubFlowchart(true);
+    setCurrentSubFlowchartNodeId(nodeId);
+
+    setFlowchartState({
+      nodes: node.subFlowchart.nodes,
+      connections: node.subFlowchart.connections,
+      selectedNodeId: null,
+      selectedConnectionId: null,
+      zoom: 1,
+      gridSize: 20,
+      snapToGrid: true,
+      showGrid: true,
+      theme: 'light'
+    });
+  }, [flowchartState, isInSubFlowchart]);
 
   const handleNavigateToMain = useCallback(() => {
     setCurrentFlowchartPath([]);
@@ -460,6 +341,17 @@ export default function SidebarLayoutPage() {
       }));
     }
   }, [mainFlowchartState]);
+
+  const handleNavigateBack = useCallback(() => {
+    if (currentFlowchartPath.length > 1) {
+      // Navigate back to parent flowchart
+      setCurrentFlowchartPath(prev => prev.slice(0, -1));
+      // For now, just go back to main flowchart
+      handleNavigateToMain();
+    } else {
+      handleNavigateToMain();
+    }
+  }, [currentFlowchartPath, handleNavigateToMain]);
 
   const handleCreateSubFlowchart = useCallback((nodeId: string) => {
     const node = flowchartState.nodes.find(n => n.id === nodeId);
@@ -515,37 +407,6 @@ export default function SidebarLayoutPage() {
     setCanvasState(newState);
     addToHistory(newState);
   }, [canvasState, addToHistory]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const shortcut = getShortcutsByKey(e.key, {
-        ctrl: e.ctrlKey,
-        shift: e.shiftKey,
-        alt: e.altKey,
-        meta: e.metaKey,
-      });
-
-      if (shortcut) {
-        e.preventDefault();
-        handleShortcut(shortcut.action);
-      }
-    };
-
-    // Handle custom delete events from canvas elements
-    const handleDeleteElement = (e: CustomEvent) => {
-      const { elementId } = e.detail;
-      handleElementDelete(elementId);
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('deleteElement', handleDeleteElement as EventListener);
-    
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('deleteElement', handleDeleteElement as EventListener);
-    };
-  }, [canvasState, historyIndex, history, handleElementDelete]);
 
   const handleElementDuplicate = useCallback((id: string) => {
     const element = canvasState.elements.find(el => el.id === id);
@@ -733,6 +594,162 @@ export default function SidebarLayoutPage() {
     }
   }, [activeTab]);
 
+  const handleShortcut = useCallback((action: string) => {
+    switch (action) {
+      case 'save':
+        handleSave();
+        break;
+      case 'export':
+        handleExport();
+        break;
+      case 'undo':
+        handleUndo();
+        break;
+      case 'redo':
+        handleRedo();
+        break;
+      case 'zoomIn':
+        handleZoomIn();
+        break;
+      case 'zoomOut':
+        handleZoomOut();
+        break;
+      case 'resetZoom':
+        handleReset();
+        break;
+      case 'toggleGrid':
+        if (activeTab === 'webpage') {
+          setCanvasState(prev => ({
+            ...prev,
+            settings: { ...prev.settings, showGrid: !prev.settings.showGrid }
+          }));
+        } else {
+          setFlowchartState(prev => ({
+            ...prev,
+            showGrid: !prev.showGrid
+          }));
+        }
+        break;
+      case 'toggleRulers':
+        setCanvasState(prev => ({
+          ...prev,
+          settings: { ...prev.settings, showRulers: !prev.settings.showRulers }
+        }));
+        break;
+      case 'selectTool':
+        setSelectedTool('select');
+        break;
+      case 'textTool':
+        setSelectedTool('text');
+        break;
+      case 'buttonTool':
+        setSelectedTool('button');
+        break;
+      case 'imageTool':
+        setSelectedTool('image');
+        break;
+      case 'shapeTool':
+        setSelectedTool('rectangle');
+        break;
+      case 'showShortcuts':
+        setShowShortcuts(true);
+        break;
+      case 'deselect':
+        if (activeTab === 'webpage') {
+          setCanvasState(prev => ({ ...prev, selectedElementId: null }));
+        } else {
+          setFlowchartState(prev => ({
+            ...prev,
+            selectedNodeId: null,
+            selectedConnectionId: null
+          }));
+        }
+        break;
+      case 'delete':
+        if (activeTab === 'webpage' && canvasState.selectedElementId) {
+          handleElementDelete(canvasState.selectedElementId);
+        }
+        break;
+      case 'duplicate':
+        if (activeTab === 'webpage' && canvasState.selectedElementId) {
+          handleElementDuplicate(canvasState.selectedElementId);
+        }
+        break;
+      case 'copy':
+        if (activeTab === 'webpage' && canvasState.selectedElementId) {
+          handleElementCopy(canvasState.selectedElementId);
+        }
+        break;
+      case 'paste':
+        if (activeTab === 'webpage') {
+          handleElementPaste();
+        }
+        break;
+      case 'selectAll':
+        if (activeTab === 'webpage') {
+          handleSelectAll();
+        }
+        break;
+      case 'desktopView':
+        setCanvasState(prev => ({ ...prev, viewport: 'desktop' }));
+        break;
+      case 'tabletView':
+        setCanvasState(prev => ({ ...prev, viewport: 'tablet' }));
+        break;
+      case 'mobileView':
+        setCanvasState(prev => ({ ...prev, viewport: 'mobile' }));
+        break;
+    }
+  }, [
+    activeTab,
+    canvasState.selectedElementId,
+    handleSave,
+    handleExport,
+    handleUndo,
+    handleRedo,
+    handleZoomIn,
+    handleZoomOut,
+    handleReset,
+    setCanvasState,
+    setFlowchartState,
+    setSelectedTool,
+    setShowShortcuts,
+    handleElementDelete,
+    handleElementDuplicate,
+    handleElementCopy,
+    handleElementPaste,
+    handleSelectAll,
+  ]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const shortcut = getShortcutsByKey(e.key, {
+        ctrl: e.ctrlKey,
+        shift: e.shiftKey,
+        alt: e.altKey,
+        meta: e.metaKey,
+      });
+
+      if (shortcut) {
+        e.preventDefault();
+        handleShortcut(shortcut.action);
+      }
+    };
+
+    const handleDeleteElement = (e: CustomEvent) => {
+      const { elementId } = e.detail;
+      handleElementDelete(elementId);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('deleteElement', handleDeleteElement as EventListener);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('deleteElement', handleDeleteElement as EventListener);
+    };
+  }, [handleShortcut, handleElementDelete]);
+
   return (
     <DndProvider backend={HTML5Backend}>
       <SidebarProvider>
@@ -818,6 +835,16 @@ export default function SidebarLayoutPage() {
                   }}
                   selectedElementId={canvasState.selectedElementId}
                   onElementSelect={handleElementSelect}
+                  onElementAdd={handleElementAddDrop}
+                  onElementUpdate={handleElementUpdate}
+                  onElementResize={handleElementResize}
+                  zoom={canvasState.zoom}
+                  showGrid={canvasState.settings.showGrid}
+                  showRulers={canvasState.settings.showRulers}
+                  gridSize={canvasState.grid.size}
+                  snapToGrid={canvasState.grid.snap}
+                  viewport={canvasState.viewport}
+                  canvasHeight={canvasState.canvasHeight}
                 />
               ) : (
                 <FlowchartBuilder

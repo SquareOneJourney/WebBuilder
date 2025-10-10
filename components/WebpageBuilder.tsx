@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 import { useDrop } from 'react-dnd';
 import { Element } from '@/types';
 import CanvasElement from './CanvasElement';
@@ -8,6 +8,7 @@ import ContextMenu from './ContextMenu';
 import SmartGuides, { getSnapPosition } from './SmartGuides';
 import SelectionBox, { getElementsInSelection } from './SelectionBox';
 import AlignmentToolbar, { alignElements } from './AlignmentToolbar';
+import Canvas from './Canvas';
 
 interface WebpageBuilderProps {
   elements: Element[];
@@ -16,11 +17,14 @@ interface WebpageBuilderProps {
   onElementSelect: (id: string | null) => void;
   onElementAdd?: (type: string, x: number, y: number) => void;
   onElementUpdate?: (id: string, updates: Partial<Element>) => void;
-  onElementMove?: (id: string, x: number, y: number) => void;
   onElementResize?: (id: string, width: number, height: number) => void;
   snapToGrid?: boolean;
   showGrid?: boolean;
   gridSize?: number;
+  zoom?: number;
+  showRulers?: boolean;
+  viewport?: 'desktop' | 'tablet' | 'mobile';
+  canvasHeight?: number;
 }
 
 export default function WebpageBuilder({
@@ -30,11 +34,14 @@ export default function WebpageBuilder({
   onElementSelect,
   onElementAdd,
   onElementUpdate,
-  onElementMove,
   onElementResize,
   snapToGrid = true,
   showGrid = true,
-  gridSize = 20
+  gridSize = 20,
+  zoom = 1,
+  showRulers = true,
+  viewport = 'desktop',
+  canvasHeight,
 }: WebpageBuilderProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; elementId: string | null } | null>(null);
@@ -50,8 +57,16 @@ export default function WebpageBuilder({
       const offset = monitor.getClientOffset();
       if (offset && canvasRef.current && onElementAdd) {
         const canvasRect = canvasRef.current.getBoundingClientRect();
-        let x = offset.x - canvasRect.left;
-        let y = offset.y - canvasRect.top;
+        const rulerOffset = showRulers ? 20 : 0;
+        const scrollLeft = canvasRef.current.scrollLeft;
+        const scrollTop = canvasRef.current.scrollTop;
+        const zoomFactor = zoom || 1;
+
+        let x = (offset.x - canvasRect.left + scrollLeft - rulerOffset) / zoomFactor;
+        let y = (offset.y - canvasRect.top + scrollTop - rulerOffset) / zoomFactor;
+
+        x = Math.max(0, x);
+        y = Math.max(0, y);
 
         if (snapToGrid) {
           x = Math.round(x / gridSize) * gridSize;
@@ -64,12 +79,10 @@ export default function WebpageBuilder({
     collect: (monitor) => ({
       isOver: monitor.isOver(),
     }),
-  }), [onElementAdd, snapToGrid, gridSize]);
+  }), [onElementAdd, snapToGrid, gridSize, showRulers, zoom]);
 
   // Enhanced element move with snapping
   const handleElementMoveWithSnap = useCallback((id: string, x: number, y: number) => {
-    if (!onElementMove) return;
-
     const element = elements.find(el => el.id === id);
     if (!element) return;
 
@@ -81,8 +94,43 @@ export default function WebpageBuilder({
       finalY = Math.round(y / gridSize) * gridSize;
     }
 
-    onElementMove(id, finalX, finalY);
-  }, [elements, onElementMove, snapToGrid, gridSize]);
+    // Smart snapping to other elements
+    finalX = getSnapPosition(finalX, elements, id, element.width, 'x', 8);
+    finalY = getSnapPosition(finalY, elements, id, element.height, 'y', 8);
+
+    const deltaX = finalX - element.x;
+    const deltaY = finalY - element.y;
+
+    if (deltaX === 0 && deltaY === 0) return;
+
+    const activeIds = selectedElementIds.includes(id)
+      ? selectedElementIds
+      : [id];
+
+    const activeIdSet = new Set(activeIds);
+
+    const updatedElements = elements.map(el => {
+      if (!activeIdSet.has(el.id)) {
+        return el;
+      }
+
+      if (el.constraints?.lockPosition) {
+        return el;
+      }
+
+      if (el.id === id) {
+        return { ...el, x: finalX, y: finalY };
+      }
+
+      return {
+        ...el,
+        x: Math.max(0, el.x + deltaX),
+        y: Math.max(0, el.y + deltaY),
+      };
+    });
+
+    onElementsUpdate(updatedElements);
+  }, [elements, selectedElementIds, snapToGrid, gridSize, onElementsUpdate]);
 
   // Multi-select with Shift+click
   const handleElementSelectWithModifiers = useCallback((id: string | null, shiftKey: boolean) => {
@@ -113,35 +161,54 @@ export default function WebpageBuilder({
   // Box selection
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
-    if (e.target !== e.currentTarget.querySelector('.relative')) return;
 
-    const canvasRect = canvasRef.current?.getBoundingClientRect();
-    if (!canvasRect || !canvasRef.current) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-element-id]')) {
+      return;
+    }
 
-    const x = e.clientX - canvasRect.left + canvasRef.current.scrollLeft;
-    const y = e.clientY - canvasRect.top + canvasRef.current.scrollTop;
+    const container = canvasRef.current;
+    if (!container) return;
+
+    const canvasRect = container.getBoundingClientRect();
+    const rulerOffset = showRulers ? 20 : 0;
+    const zoomFactor = zoom || 1;
+
+    const rawX = e.clientX - canvasRect.left + container.scrollLeft - rulerOffset;
+    const rawY = e.clientY - canvasRect.top + container.scrollTop - rulerOffset;
+
+    const x = Math.max(0, rawX / zoomFactor);
+    const y = Math.max(0, rawY / zoomFactor);
 
     setIsBoxSelecting(true);
     setSelectionStart({ x, y });
     setSelectionCurrent({ x, y });
+    setIsDraggingElement(false);
 
     if (!e.shiftKey) {
       setSelectedElementIds([]);
       onElementSelect(null);
     }
-  }, [onElementSelect]);
+  }, [onElementSelect, showRulers, zoom]);
 
   useEffect(() => {
     if (!isBoxSelecting || !selectionStart) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const canvasRect = canvasRef.current?.getBoundingClientRect();
-      if (!canvasRect || !canvasRef.current) return;
+      const container = canvasRef.current;
+      if (!container) return;
 
-      const x = e.clientX - canvasRect.left + canvasRef.current.scrollLeft;
-      const y = e.clientY - canvasRect.top + canvasRef.current.scrollTop;
+      const canvasRect = container.getBoundingClientRect();
+      const rulerOffset = showRulers ? 20 : 0;
+      const zoomFactor = zoom || 1;
 
-      setSelectionCurrent({ x, y });
+      const rawX = e.clientX - canvasRect.left + container.scrollLeft - rulerOffset;
+      const rawY = e.clientY - canvasRect.top + container.scrollTop - rulerOffset;
+
+      setSelectionCurrent({
+        x: Math.max(0, rawX / zoomFactor),
+        y: Math.max(0, rawY / zoomFactor)
+      });
     };
 
     const handleMouseUp = () => {
@@ -170,7 +237,7 @@ export default function WebpageBuilder({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isBoxSelecting, selectionStart, selectionCurrent, elements, onElementSelect]);
+  }, [isBoxSelecting, selectionStart, selectionCurrent, elements, onElementSelect, showRulers, zoom]);
 
   // Alignment
   const handleAlign = useCallback((alignType: string) => {
@@ -186,6 +253,17 @@ export default function WebpageBuilder({
     drop(node);
   }, [drop]);
 
+  const dynamicContentHeight = useMemo(() => {
+    const furthestElementBottom = elements.reduce((max, element) => {
+      const bottom = (element?.y || 0) + (element?.height || 0);
+      return bottom > max ? bottom : max;
+    }, 0);
+
+    const baseHeight = canvasHeight ?? 800;
+    // Add breathing room below the lowest element so controls never collide with the edge
+    return Math.max(baseHeight, furthestElementBottom + 240);
+  }, [elements, canvasHeight]);
+
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50 relative max-w-full overflow-hidden">
       {/* Alignment Toolbar */}
@@ -194,11 +272,15 @@ export default function WebpageBuilder({
         onAlign={handleAlign}
       />
 
-      <div
-        ref={setRefs}
-        className={`flex-1 relative overflow-auto transition-colors ${
-          isOver ? 'bg-blue-50' : 'bg-gray-50'
-        }`}
+      <Canvas
+        setContainerRef={setRefs}
+        className={isOver ? 'bg-blue-50' : 'bg-gray-50'}
+        showGrid={showGrid}
+        gridSize={gridSize}
+        showRulers={showRulers}
+        zoom={zoom}
+        viewport={viewport}
+        contentHeight={dynamicContentHeight}
         onClick={() => {
           setSelectedElementIds([]);
           onElementSelect(null);
@@ -213,17 +295,6 @@ export default function WebpageBuilder({
           });
         }}
       >
-        {/* Grid Background */}
-        {showGrid && (
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              backgroundImage: 'radial-gradient(circle, #d1d5db 1px, transparent 1px)',
-              backgroundSize: `${gridSize}px ${gridSize}px`
-            }}
-          />
-        )}
-
         {/* Canvas Content Area */}
         <div className="relative w-full bg-white mx-auto" style={{ 
           minHeight: '100vh', 
@@ -235,11 +306,11 @@ export default function WebpageBuilder({
           {elements.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center">
-                <div className="text-6xl mb-4">🎨</div>
+                <div className="text-6xl mb-4 text-gray-300">+</div>
                 <h3 className="text-xl font-semibold text-gray-700 mb-2">Start Building</h3>
                 <p className="text-gray-500">Drag elements from the left panel to get started</p>
                 <p className="text-xs text-gray-400 mt-2">
-                  Hold Shift to select multiple • Right-click for options
+                  Hold Shift to select multiple - Right-click for options
                 </p>
               </div>
             </div>
@@ -277,10 +348,12 @@ export default function WebpageBuilder({
               onMove={handleElementMoveWithSnap}
               onResize={onElementResize!}
               canvasRef={canvasRef}
+              zoom={zoom}
+              onDragStateChange={setIsDraggingElement}
             />
           ))}
         </div>
-      </div>
+      </Canvas>
 
       {/* Context Menu */}
       {contextMenu && (
@@ -362,3 +435,5 @@ export default function WebpageBuilder({
     </div>
   );
 }
+
+

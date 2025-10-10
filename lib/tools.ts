@@ -78,6 +78,18 @@ export const tools: Tool[] = [
       color: '#000000',
       backgroundColor: 'transparent',
     },
+    defaultContent: {
+      text: 'Design better landing pages',
+      level: 2,
+    },
+    defaultProps: {
+      headingLevel: 2,
+      typography: {
+        mobile: { fontSize: 28, lineHeight: 34 },
+        tablet: { fontSize: 32, lineHeight: 38 },
+        desktop: { fontSize: 40, lineHeight: 46 },
+      },
+    },
   },
   {
     id: 'paragraph',
@@ -93,6 +105,18 @@ export const tools: Tool[] = [
       color: '#000000',
       backgroundColor: 'transparent',
       lineHeight: 1.5,
+    },
+    defaultContent: {
+      text: 'Use WebBuilder to design, iterate, and publish high-converting landing pages without touching code.',
+      variant: 'body',
+    },
+    defaultProps: {
+      paragraphVariant: 'body',
+      typography: {
+        mobile: { fontSize: 15, lineHeight: 24 },
+        tablet: { fontSize: 16, lineHeight: 26 },
+        desktop: { fontSize: 18, lineHeight: 28 },
+      },
     },
   },
   {
@@ -158,8 +182,14 @@ export const tools: Tool[] = [
     keywords: ['icon', 'symbol', 'graphic', 'emoji'],
     defaultStyles: {
       fontSize: 24,
-      color: '#000000',
+      color: '#1d4ed8',
       backgroundColor: 'transparent',
+    },
+    defaultProps: {
+      iconName: 'star',
+      iconBackground: 'none',
+      iconPadding: 16,
+      iconBackgroundColor: '#eef2ff',
     },
     constraints: {
       minWidth: 24,
@@ -283,10 +313,38 @@ export const tools: Tool[] = [
       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
     },
     defaultContent: {
-      title: 'Card Title',
-      description: 'This is a card description. Click the edit button to customize the content.',
-      image: '',
-      button: 'Learn More'
+      eyebrow: 'Featured template',
+      title: 'Launch stunning pages in minutes',
+      description: 'Use WebBuilder to design, iterate, and publish high-converting landing pages without touching code.',
+      image: {
+        url: 'https://images.unsplash.com/photo-1523475472560-d2df97ec485c?auto=format&fit=crop&w=960&q=80',
+        alt: 'Web design workspace',
+      },
+      primaryAction: {
+        label: 'Start building',
+        href: '#',
+      },
+      secondaryAction: {
+        label: 'View docs',
+        href: '#',
+      },
+      features: [
+        {
+          id: 'feature-1',
+          label: 'Visual editing',
+          description: 'Drag & drop sections, use keyboard shortcuts, and preview responsive breakpoints.',
+        },
+        {
+          id: 'feature-2',
+          label: 'One-click export',
+          description: 'Download production-ready HTML/CSS or sync with your repo instantly.',
+        },
+      ],
+    },
+    defaultProps: {
+      cardLayout: 'image-top',
+      cardHighlight: false,
+      cardAccentColor: '#2563eb',
     },
   },
   {
@@ -509,6 +567,36 @@ export const tools: Tool[] = [
       backgroundColor: '#ffffff',
       border: '1px solid #e5e7eb',
       borderRadius: 8,
+    },
+    defaultContent: {
+      heading: 'Frequently Asked Questions',
+      subheading: 'Support',
+      description: 'Answers to top questions from teams designing with WebBuilder.',
+      allowMultiple: false,
+      defaultOpenIds: ['accordion-item-1'],
+      items: [
+        {
+          id: 'accordion-item-1',
+          title: 'How does WebBuilder work?',
+          description: 'Start with a section, customize it visually, and export responsive code.',
+          content:
+            'Pick a template, drag in elements, then fine-tune spacing, colors, and typography. Everything stays responsive, so you can preview desktop, tablet, and mobile in real time.',
+        },
+        {
+          id: 'accordion-item-2',
+          title: 'Can I export the code?',
+          description: 'Yes—download a clean HTML/CSS package anytime.',
+          content:
+            'Generate production-ready markup that mirrors your canvas. Hand it to developers, host it yourself, or iterate further inside your framework of choice.',
+        },
+        {
+          id: 'accordion-item-3',
+          title: 'Does it support collaboration?',
+          description: 'Share projects, reuse saved sections, and keep brand tokens in sync.',
+          content:
+            'Save reusable blocks, apply global typography and color tokens, and invite teammates to keep everything on-brand as you ship new pages faster.',
+        },
+      ],
     },
   },
   {

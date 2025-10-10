@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Image from 'next/image';
 import { Element } from '@/types';
 import { Upload, Image as ImageIcon } from 'lucide-react';
 
@@ -58,10 +59,13 @@ export default function ImageElement({ element, onUpdate }: ImageElementProps) {
       />
       
       {imageUrl ? (
-        <img
+        <Image
           src={imageUrl}
           alt="Uploaded content"
-          className="w-full h-full object-cover"
+          fill
+          className="object-cover"
+          sizes="100vw"
+          unoptimized
         />
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">

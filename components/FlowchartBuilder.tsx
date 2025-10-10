@@ -131,14 +131,16 @@ export default function FlowchartBuilder({ flowchartState, onFlowchartStateUpdat
               let nodeX, nodeY;
               
               if (selectedNodeIds.length > 1 && initialNodePositions[node.id]) {
-                // For multi-selection, calculate offset from primary node and apply to each node
-                const primaryNode = flowchartState.nodes.find(n => n.id === flowchartState.selectedNodeId);
-                if (primaryNode && flowchartState.selectedNodeId && initialNodePositions[flowchartState.selectedNodeId]) {
-                  const deltaX = finalX - initialNodePositions[flowchartState.selectedNodeId].x;
-                  const deltaY = finalY - initialNodePositions[flowchartState.selectedNodeId].y;
+                // For multi-selection, calculate the delta from the clicked node's initial position
+                // and apply that same delta to all other nodes
+                const clickedNodeId = selectedNodeIds.find(id => initialNodePositions[id]);
+                if (clickedNodeId && initialNodePositions[clickedNodeId]) {
+                  const deltaX = finalX - initialNodePositions[clickedNodeId].x;
+                  const deltaY = finalY - initialNodePositions[clickedNodeId].y;
                   nodeX = initialNodePositions[node.id].x + deltaX;
                   nodeY = initialNodePositions[node.id].y + deltaY;
                 } else {
+                  // Fallback: use current position
                   nodeX = node.x;
                   nodeY = node.y;
                 }
@@ -217,7 +219,18 @@ export default function FlowchartBuilder({ flowchartState, onFlowchartStateUpdat
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [isDragging, isResizing, isPanning, flowchartState.selectedNodeId, dragOffset, resizeStart, panStart, canvasOffset, flowchartState, onFlowchartStateUpdate]);
+  }, [
+    isDragging,
+    isResizing,
+    isPanning,
+    flowchartState,
+    dragOffset,
+    resizeStart,
+    panStart,
+    selectedNodeIds,
+    initialNodePositions,
+    onFlowchartStateUpdate,
+  ]);
 
   const addNode = useCallback((shape: string = 'rectangle') => {
     const randomColor = defaultColors[Math.floor(Math.random() * defaultColors.length)];
@@ -256,7 +269,7 @@ export default function FlowchartBuilder({ flowchartState, onFlowchartStateUpdat
       ...flowchartState,
       nodes: [...flowchartState.nodes, newNode]
     });
-  }, [flowchartState, onFlowchartStateUpdate, canvasOffset]);
+  }, [flowchartState, onFlowchartStateUpdate, canvasRef]);
 
   const deleteNode = useCallback((nodeId: string) => {
     onFlowchartStateUpdate({
@@ -353,7 +366,7 @@ export default function FlowchartBuilder({ flowchartState, onFlowchartStateUpdat
       // Start dragging the multi-selection
       setIsDragging(true);
       
-      // Store initial positions for multi-selection first
+      // Store initial positions for ALL selected nodes
       const initialPositions: Record<string, { x: number, y: number }> = {};
       selectedNodeIds.forEach(id => {
         const selectedNode = flowchartState.nodes.find(n => n.id === id);
@@ -363,12 +376,12 @@ export default function FlowchartBuilder({ flowchartState, onFlowchartStateUpdat
       });
       setInitialNodePositions(initialPositions);
       
-      // Calculate drag offset based on the primary node's initial position
-      const primaryNode = flowchartState.nodes.find(n => n.id === flowchartState.selectedNodeId);
-      if (primaryNode) {
+      // Calculate drag offset based on the CLICKED node's position (not the primary selected node)
+      const clickedNode = flowchartState.nodes.find(n => n.id === nodeId);
+      if (clickedNode) {
         setDragOffset({ 
-          x: e.clientX - (primaryNode.x * flowchartState.zoom), 
-          y: e.clientY - (primaryNode.y * flowchartState.zoom) 
+          x: e.clientX - (clickedNode.x * flowchartState.zoom), 
+          y: e.clientY - (clickedNode.y * flowchartState.zoom) 
         });
       }
       return;
@@ -1456,12 +1469,12 @@ export default function FlowchartBuilder({ flowchartState, onFlowchartStateUpdat
               <p className="text-xl font-medium mb-2">Create Your Flowchart</p>
               <p className="text-sm">Add text boxes and connect them to build your flowchart</p>
               <div className="mt-6 text-xs text-gray-400 space-y-1">
-                <p>• Click "Add Text Box" to create a new text box</p>
-                <p>• Choose different shapes (rectangle, circle, diamond, etc.)</p>
-                <p>• Double-click any text box to edit the content</p>
-                <p>• Drag text boxes to reposition them</p>
-                <p>• Use the connection tool to link text boxes together</p>
-                <p>• Select a text box to change colors and styling</p>
+                <p>- Click &ldquo;Add Text Box&rdquo; to create a new text box</p>
+                <p>- Choose different shapes (rectangle, circle, diamond, etc.)</p>
+                <p>- Double-click any text box to edit the content</p>
+                <p>- Drag text boxes to reposition them</p>
+                <p>- Use the connection tool to link text boxes together</p>
+                <p>- Select a text box to change colors and styling</p>
               </div>
             </div>
           </div>

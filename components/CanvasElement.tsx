@@ -2,12 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Element } from '@/types';
-import TextElement from './elements/TextElement';
+import HeadingElement from './elements/HeadingElement';
+import ParagraphElement from './elements/ParagraphElement';
 import ButtonElement from './elements/ButtonElement';
 import ImageElement from './elements/ImageElement';
 import ShapeElement from './elements/ShapeElement';
 import SearchElement from './elements/SearchElement';
 import NavElement from './elements/NavElement';
+import IconElement from './elements/IconElement';
 import {
   CardElement,
   HeroElement,
@@ -38,6 +40,8 @@ interface CanvasElementProps {
   onMove: (id: string, x: number, y: number) => void;
   onResize: (id: string, width: number, height: number) => void;
   canvasRef: React.RefObject<HTMLDivElement>;
+  zoom?: number;
+  onDragStateChange?: (isDragging: boolean) => void;
 }
 
 export default function CanvasElement({
@@ -47,13 +51,15 @@ export default function CanvasElement({
   onUpdate,
   onMove,
   onResize,
-  canvasRef
+  canvasRef,
+  zoom = 1,
+  onDragStateChange,
 }: CanvasElementProps) {
   const elementRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<string>('');
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState({ mouseX: 0, mouseY: 0, startX: 0, startY: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -61,9 +67,12 @@ export default function CanvasElement({
     e.stopPropagation();
 
     setIsDragging(true);
+    onDragStateChange?.(true);
     setDragStart({
-      x: e.clientX - element.x,
-      y: e.clientY - element.y
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      startX: element.x,
+      startY: element.y
     });
     onSelect(element.id);
   };
@@ -73,6 +82,7 @@ export default function CanvasElement({
     e.stopPropagation();
 
     setIsResizing(true);
+    onDragStateChange?.(true);
     setResizeDirection(direction);
     setResizeStart({
       x: e.clientX,
@@ -90,14 +100,16 @@ export default function CanvasElement({
       if (!canvasRect) return;
 
       if (isDragging) {
-        const newX = Math.max(0, e.clientX - dragStart.x);
-        const newY = Math.max(0, e.clientY - dragStart.y);
+        const deltaX = (e.clientX - dragStart.mouseX) / (zoom || 1);
+        const deltaY = (e.clientY - dragStart.mouseY) / (zoom || 1);
+        const newX = Math.max(0, dragStart.startX + deltaX);
+        const newY = Math.max(0, dragStart.startY + deltaY);
         onMove(element.id, newX, newY);
       }
 
       if (isResizing) {
-        const deltaX = e.clientX - resizeStart.x;
-        const deltaY = e.clientY - resizeStart.y;
+        const deltaX = (e.clientX - resizeStart.x) / (zoom || 1);
+        const deltaY = (e.clientY - resizeStart.y) / (zoom || 1);
 
         let newWidth = element.width;
         let newHeight = element.height;
@@ -146,6 +158,7 @@ export default function CanvasElement({
       setIsDragging(false);
       setIsResizing(false);
       setResizeDirection('');
+      onDragStateChange?.(false);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -155,7 +168,19 @@ export default function CanvasElement({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, isResizing, dragStart, resizeStart, resizeDirection, element, onMove, onResize, canvasRef]);
+  }, [
+    isDragging,
+    isResizing,
+    dragStart,
+    resizeStart,
+    resizeDirection,
+    element,
+    onMove,
+    onResize,
+    canvasRef,
+    zoom,
+    onDragStateChange,
+  ]);
 
   const renderElementContent = () => {
     const commonProps = {
@@ -165,10 +190,15 @@ export default function CanvasElement({
     };
 
     switch (element.type) {
-      case 'text':
       case 'heading':
+        return <HeadingElement {...commonProps} />;
+      
       case 'paragraph':
-        return <TextElement {...commonProps} />;
+        return <ParagraphElement {...commonProps} />;
+      
+      case 'text':
+        // Fallback for generic text - use paragraph
+        return <ParagraphElement {...commonProps} />;
 
       case 'button':
       case 'cta':
@@ -188,8 +218,11 @@ export default function CanvasElement({
       case 'menu':
         return <NavElement {...commonProps} />;
 
+      case 'icon':
+        return <IconElement element={element} onUpdate={onUpdate} isSelected={isSelected} />;
+
       case 'card':
-        return <CardElement content={element.content || {}} styles={element.styles} onUpdate={onUpdate} isEditing={isSelected} />;
+        return <CardElement content={element.content || {}} styles={element.styles} props={element.props} onUpdate={onUpdate} isEditing={isSelected} />;
 
       case 'hero':
         return <HeroElement content={element.content || {}} styles={element.styles} onUpdate={onUpdate} isEditing={isSelected} />;

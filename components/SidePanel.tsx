@@ -299,7 +299,7 @@ export default function SidePanel({
 
 
   return (
-    <div className="w-80 lg:w-96 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+    <div className="w-80 lg:w-96 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 h-full overflow-hidden">
       <div className="p-4 border-b border-gray-200">
         <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
           {[

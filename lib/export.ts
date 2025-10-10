@@ -950,3 +950,156 @@ export const exportProject = (
   const exporter = new ExportManager(canvasState, settings, options);
   return exporter.export();
 };
+
+// Flowchart export functions
+export const exportFlowchartSVG = (
+  nodes: any[],
+  connections: any[],
+  settings: any
+): string => {
+  // Handle empty flowchart
+  if (nodes.length === 0) {
+    return `<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg">
+      <text x="200" y="100" text-anchor="middle" fill="#666" font-size="16">Empty Flowchart</text>
+    </svg>`;
+  }
+  
+  // Calculate bounding box with proper fallbacks
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  
+  nodes.forEach(node => {
+    minX = Math.min(minX, node.x);
+    minY = Math.min(minY, node.y);
+    maxX = Math.max(maxX, node.x + node.width);
+    maxY = Math.max(maxY, node.y + node.height);
+  });
+  
+  // Ensure we have valid bounds
+  if (minX === Infinity) {
+    minX = 0;
+    minY = 0;
+    maxX = 400;
+    maxY = 200;
+  }
+  
+  const padding = 50;
+  const width = Math.max(400, maxX - minX + (padding * 2));
+  const height = Math.max(200, maxY - minY + (padding * 2));
+  
+  // Helper function to escape XML characters
+  const escapeXml = (text: string): string => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+  
+  // Generate SVG content
+  let svgContent = '';
+  
+  // Add connections first (so they appear behind nodes)
+  connections.forEach(connection => {
+    const fromNode = nodes.find(n => n.id === connection.from);
+    const toNode = nodes.find(n => n.id === connection.to);
+    
+    if (fromNode && toNode) {
+      const fromX = fromNode.x + fromNode.width / 2 - minX + padding;
+      const fromY = fromNode.y + fromNode.height - minY + padding;
+      const toX = toNode.x + toNode.width / 2 - minX + padding;
+      const toY = toNode.y - minY + padding;
+      
+      svgContent += `<line x1="${fromX}" y1="${fromY}" x2="${toX}" y2="${toY}" 
+        stroke="${connection.styles?.strokeColor || '#374151'}" 
+        stroke-width="${connection.styles?.strokeWidth || 2}" 
+        marker-end="url(#arrowhead)" />`;
+    }
+  });
+  
+  // Add nodes
+  nodes.forEach(node => {
+    const x = node.x - minX + padding;
+    const y = node.y - minY + padding;
+    const nodeWidth = node.width;
+    const nodeHeight = node.height;
+    
+    // Calculate border radius based on shape
+    const borderRadius = node.styles?.borderRadius || 8;
+    const rx = borderRadius;
+    const ry = borderRadius;
+    
+    svgContent += `<rect x="${x}" y="${y}" width="${nodeWidth}" height="${nodeHeight}" 
+      rx="${rx}" ry="${ry}"
+      fill="${node.styles?.backgroundColor || '#3b82f6'}" 
+      stroke="${node.styles?.borderColor || 'transparent'}" 
+      stroke-width="${node.styles?.borderWidth || 0}" />`;
+    
+    // Add text with proper escaping and word wrapping
+    const textX = x + nodeWidth / 2;
+    const textY = y + nodeHeight / 2;
+    const fontSize = node.styles?.fontSize || 14;
+    const escapedLabel = escapeXml(node.label || '');
+    
+    // Split long text into multiple lines if needed
+    const maxCharsPerLine = Math.floor(nodeWidth / (fontSize * 0.6));
+    const words = escapedLabel.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    
+    words.forEach(word => {
+      if ((currentLine + word).length <= maxCharsPerLine) {
+        currentLine += (currentLine ? ' ' : '') + word;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    });
+    if (currentLine) lines.push(currentLine);
+    
+    // Limit to 3 lines maximum
+    const displayLines = lines.slice(0, 3);
+    const lineHeight = fontSize * 1.2;
+    const startY = textY - ((displayLines.length - 1) * lineHeight) / 2;
+    
+    displayLines.forEach((line, index) => {
+      const lineY = startY + (index * lineHeight);
+      svgContent += `<text x="${textX}" y="${lineY}" 
+        text-anchor="middle" 
+        dominant-baseline="middle" 
+        fill="${node.styles?.textColor || '#ffffff'}" 
+        font-size="${fontSize}" 
+        font-weight="${node.styles?.fontWeight || '500'}"
+        font-family="system-ui, -apple-system, sans-serif">${line}</text>`;
+    });
+  });
+  
+  return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
+    <defs>
+      <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+        refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#374151" />
+      </marker>
+    </defs>
+    ${svgContent}
+  </svg>`;
+};
+
+export const exportFlowchartJSON = (
+  nodes: any[],
+  connections: any[],
+  settings: any
+): string => {
+  const flowchartData = {
+    nodes,
+    connections,
+    settings,
+    metadata: {
+      exported: new Date().toISOString(),
+      version: '1.0',
+      tool: 'WebBuilder Flowchart'
+    }
+  };
+  
+  return JSON.stringify(flowchartData, null, 2);
+};

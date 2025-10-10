@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import Image from 'next/image';
+import { sanitizeAccordionContent } from '@/lib/accordion';
+import { sanitizeCardContent, cloneCardContent, CardContent } from '@/lib/card';
 import { 
   Star, 
   Users, 
@@ -26,46 +29,121 @@ import {
 } from 'lucide-react';
 
 // Card Component
-export const CardElement = ({ content, styles, onUpdate, isEditing }: any) => {
-  const [isHovered, setIsHovered] = useState(false);
-  
-  return (
-    <div
-      className="relative group"
-      style={styles}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow p-6">
-        {content.image && (
-          <div className="mb-4">
-            <img 
-              src={content.image} 
-              alt={content.title}
-              className="w-full h-48 object-cover rounded-lg"
-            />
-          </div>
-        )}
-        
-        {content.title && (
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            {content.title}
-          </h3>
-        )}
-        
-        {content.description && (
-          <p className="text-gray-600 mb-4">
-            {content.description}
-          </p>
-        )}
-        
-        {content.button && (
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
-            {content.button}
-          </button>
+export const CardElement = ({ content, styles, props, isEditing }: any) => {
+  const cardContent = sanitizeCardContent(content);
+  const layout = props?.cardLayout ?? 'image-top';
+  const highlight = props?.cardHighlight ?? false;
+  const accentColor = props?.cardAccentColor ?? '#2563eb';
+
+  const containerBase = highlight
+    ? 'bg-white border-2 shadow-lg shadow-blue-100 border-blue-400'
+    : 'bg-white border border-gray-200 shadow-sm';
+
+  const renderMedia = () => {
+    if (!cardContent.image?.url || layout === 'minimal') {
+      return null;
+    }
+
+    return (
+      <div
+        className={`${layout === 'image-left' ? 'relative w-full md:w-2/5 h-52 md:h-auto' : 'relative w-full h-56'} bg-gray-100`}
+      >
+        <Image
+          src={cardContent.image.url}
+          alt={cardContent.image.alt ?? cardContent.title ?? 'Card media'}
+          fill
+          className="object-cover"
+          sizes="(min-width: 768px) 40vw, 100vw"
+          unoptimized
+        />
+        {highlight && (
+          <span className="absolute inset-x-0 bottom-0 h-1" style={{ background: accentColor }} />
         )}
       </div>
-      
+    );
+  };
+
+  const features = cardContent.features ?? [];
+
+  return (
+    <div className="relative group" style={styles}>
+      <div
+        className={`${containerBase} rounded-2xl overflow-hidden transition-shadow flex ${layout === 'image-left' ? 'flex-col md:flex-row' : 'flex-col'}`}
+      >
+        {layout === 'image-left' && renderMedia()}
+
+        <div className={`flex-1 flex flex-col ${layout === 'image-left' ? 'p-6 md:p-10' : layout === 'minimal' ? 'p-6' : 'p-8 space-y-6'}`}
+          style={{ gap: '1.25rem' }}
+        >
+          <div className="space-y-3">
+            {cardContent.eyebrow && (
+              <span
+                className="text-xs font-semibold tracking-[0.25em] uppercase"
+                style={{ color: accentColor }}
+              >
+                {cardContent.eyebrow}
+              </span>
+            )}
+
+            <h3 className="text-2xl font-semibold text-gray-900 leading-tight">
+              {cardContent.title}
+            </h3>
+
+            {cardContent.description && (
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {cardContent.description}
+              </p>
+            )}
+          </div>
+
+          {features.length > 0 && (
+            <div className="space-y-2">
+              {features.map((feature) => (
+                <div
+                  key={feature.id}
+                  className="flex items-start gap-3 text-sm text-gray-600"
+                >
+                  <span
+                    className="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold"
+                    style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
+                  >
+                    ✓
+                  </span>
+                  <div className="space-y-1">
+                    <span className="font-medium text-gray-800">{feature.label}</span>
+                    {feature.description && (
+                      <p className="text-xs text-gray-500 leading-snug">{feature.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {(cardContent.primaryAction || cardContent.secondaryAction) && (
+            <div className="flex flex-wrap gap-2 pt-2">
+              {cardContent.primaryAction && (
+                <button
+                  className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+                >
+                  {cardContent.primaryAction.label}
+                </button>
+              )}
+
+              {cardContent.secondaryAction && (
+                <button
+                  className="inline-flex items-center gap-2 rounded-md border border-blue-200 px-4 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-50"
+                >
+                  {cardContent.secondaryAction.label}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {layout !== 'image-left' && renderMedia()}
+      </div>
+
       {isEditing && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button className="bg-white border border-gray-300 rounded p-1 shadow-sm">
@@ -158,15 +236,19 @@ export const TestimonialElement = ({ content, styles, onUpdate, isEditing }: any
         </div>
         
         <blockquote className="text-lg text-gray-700 mb-6 italic">
-          "{content.quote}"
+          &ldquo;{content.quote}&rdquo;
         </blockquote>
         
         <div className="flex items-center">
           {content.avatar && (
-            <img 
-              src={content.avatar} 
-              alt={content.name}
-              className="w-12 h-12 rounded-full mr-4"
+            <Image
+              src={content.avatar}
+              alt={content.name ?? 'Avatar'}
+              width={48}
+              height={48}
+              className="w-12 h-12 rounded-full mr-4 object-cover"
+              sizes="48px"
+              unoptimized
             />
           )}
           <div>
@@ -363,18 +445,21 @@ export const GalleryElement = ({ content, styles, onUpdate, isEditing }: any) =>
         {content.images && content.images.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {content.images.map((image: string, index: number) => (
-              <div
-                key={index}
-                className="aspect-square bg-gray-200 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => setSelectedImage(index)}
-              >
-                <img 
-                  src={image} 
-                  alt={`Gallery image ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
+            <div
+              key={index}
+              className="aspect-square bg-gray-200 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity relative"
+              onClick={() => setSelectedImage(index)}
+            >
+              <Image
+                src={image}
+                alt={`Gallery image ${index + 1}`}
+                fill
+                className="object-cover"
+                sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+                unoptimized
+              />
+            </div>
+          ))}
           </div>
         )}
         
@@ -455,61 +540,129 @@ export const TabsElement = ({ content, styles, onUpdate, isEditing }: any) => {
   );
 };
 
-// Accordion Component
-export const AccordionElement = ({ content, styles, onUpdate, isEditing }: any) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const [openItems, setOpenItems] = useState<number[]>([]);
-  
-  const toggleItem = (index: number) => {
-    setOpenItems(prev => 
-      prev.includes(index) 
-        ? prev.filter(i => i !== index)
-        : [...prev, index]
-    );
+export const AccordionElement = ({ content, styles, isEditing }: any) => {
+  const { content: accordionContent, initialOpenIds } = useMemo(
+    () => sanitizeAccordionContent(content),
+    [content]
+  );
+
+  const [openItems, setOpenItems] = useState<string[]>(initialOpenIds);
+
+  useEffect(() => {
+    setOpenItems(initialOpenIds);
+  }, [initialOpenIds]);
+
+  const accentColor = (styles && styles.accentColor) || '#2563eb';
+  const rootStyle = useMemo(() => ({ ...(styles || {}), '--accordion-accent': accentColor } as React.CSSProperties), [styles, accentColor]);
+
+  const toggleItem = (itemId: string) => {
+    setOpenItems(prev => {
+      const isOpen = prev.includes(itemId);
+
+      if (accordionContent.allowMultiple) {
+        return isOpen ? prev.filter(id => id !== itemId) : [...prev, itemId];
+      }
+
+      return isOpen ? [] : [itemId];
+    });
   };
-  
+
   return (
     <div
       className="relative group"
-      style={styles}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      style={rootStyle}
     >
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        {content.title && (
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-xl font-semibold text-gray-900">{content.title}</h3>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden transition-all duration-300">
+        {(accordionContent.subheading || accordionContent.heading || accordionContent.description) && (
+          <div className="px-6 pt-6 pb-4 border-b border-gray-100 bg-white/80 backdrop-blur">
+            {accordionContent.subheading && (
+              <span className="text-xs font-semibold tracking-[0.2em] uppercase text-gray-500">
+                {accordionContent.subheading}
+              </span>
+            )}
+            {accordionContent.heading && (
+              <h3 className="mt-1 text-2xl font-semibold text-gray-900">
+                {accordionContent.heading}
+              </h3>
+            )}
+            {accordionContent.description && (
+              <p className="mt-2 text-sm text-gray-600 max-w-2xl">
+                {accordionContent.description}
+              </p>
+            )}
           </div>
         )}
-        
+
         <div className="divide-y divide-gray-200">
-          {content.items && content.items.map((item: any, index: number) => (
-            <div key={index}>
-              <button
-                onClick={() => toggleItem(index)}
-                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+          {accordionContent.items.map((item) => {
+            const isOpen = openItems.includes(item.id);
+            const panelId = `accordion-panel-${item.id}`;
+            const triggerId = `accordion-trigger-${item.id}`;
+
+            return (
+              <div
+                key={item.id}
+                className={`relative transition-colors duration-200 ${
+                  isOpen ? 'bg-blue-50/50' : 'bg-white'
+                }`}
               >
-                <span className="font-medium text-gray-900">{item.title}</span>
-                <ChevronDown 
-                  className={`w-5 h-5 text-gray-500 transition-transform ${
-                    openItems.includes(index) ? 'rotate-180' : ''
-                  }`} 
+                <span
+                  className={`absolute left-0 top-0 h-full w-1 rounded-r-full transition-colors duration-300 ${
+                    isOpen ? 'bg-[var(--accordion-accent)]' : 'bg-transparent'
+                  }`}
                 />
-              </button>
-              {openItems.includes(index) && (
-                <div className="px-6 pb-4">
-                  <p className="text-gray-700">{item.content}</p>
+                <button
+                  type="button"
+                  id={triggerId}
+                  aria-controls={panelId}
+                  aria-expanded={isOpen}
+                  onClick={() => toggleItem(item.id)}
+                  className="w-full px-6 py-4 text-left flex items-start justify-between gap-6"
+                >
+                  <div className="flex-1 min-w-0">
+                    {item.eyebrow && (
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                        {item.eyebrow}
+                      </span>
+                    )}
+                    <p className="text-base font-semibold text-gray-900 leading-snug">
+                      {item.title}
+                    </p>
+                    {item.description && (
+                      <p className="mt-1 text-sm text-gray-500 leading-relaxed">
+                        {item.description}
+                      </p>
+                    )}
+                  </div>
+                  <ChevronDown
+                    className={`mt-1 w-5 h-5 flex-shrink-0 text-gray-400 transition-transform duration-200 ${
+                      isOpen ? 'rotate-180 text-blue-600' : 'group-hover:text-gray-500'
+                    }`}
+                    aria-hidden="true"
+                  />
+                </button>
+                <div
+                  id={panelId}
+                  role="region"
+                  aria-labelledby={triggerId}
+                  className={`px-6 pb-6 overflow-hidden transition-all duration-300 ease-out ${
+                    isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <p className="text-sm text-gray-700 leading-6 whitespace-pre-line">
+                    {item.content}
+                  </p>
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </div>
-      
+
       {isEditing && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button className="bg-white border border-gray-300 rounded p-1 shadow-sm">
-            <Edit3 className="w-4 h-4" />
+          <button className="bg-white border border-gray-300 rounded p-1 shadow-sm" type="button">
+            <Edit3 className="w-4 h-4 text-gray-500" />
           </button>
         </div>
       )}
@@ -873,4 +1026,3 @@ export const ContainerElement = ({ content, styles }: any) => {
 export const SpacerElement = ({ content, styles }: any) => {
   return <div className="w-full h-full" style={{...styles, backgroundColor: "transparent"}} />;
 };
-

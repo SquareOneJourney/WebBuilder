@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Element, FlowchartNode, FlowchartConnection, FlowchartData } from '@/types';
 import { 
   Settings, 
@@ -31,12 +31,97 @@ const nodeTypes = [
   { id: 'output', name: 'Output', icon: Triangle, color: '#06b6d4' },
 ];
 
+const DEFAULT_FLOWCHART_SETTINGS = Object.freeze({
+  gridSize: 20,
+  snapToGrid: true,
+  showGrid: true,
+  theme: 'light' as const,
+});
+
+const createDefaultFlowchartData = (): FlowchartData => ({
+  nodes: [],
+  connections: [],
+  settings: { ...DEFAULT_FLOWCHART_SETTINGS },
+});
+
+const EMPTY_FLOWCHART_DATA: FlowchartData = Object.freeze(createDefaultFlowchartData());
+
 export default function FlowchartPanel({ selectedElement, onElementUpdate }: FlowchartPanelProps) {
   const [activeTab, setActiveTab] = useState<'settings' | 'nodes' | 'connections'>('settings');
   const [editingNode, setEditingNode] = useState<string | null>(null);
   const [newNodeLabel, setNewNodeLabel] = useState('');
+  const isFlowchart = selectedElement?.type === 'flowchart';
 
-  if (!selectedElement || selectedElement.type !== 'flowchart') {
+  const flowchartData = useMemo<FlowchartData>(() => {
+    if (isFlowchart) {
+      return (selectedElement?.props?.flowchartData as FlowchartData | undefined) ?? createDefaultFlowchartData();
+    }
+
+    return EMPTY_FLOWCHART_DATA;
+  }, [isFlowchart, selectedElement]);
+
+  const handleFlowchartUpdate = useCallback((updates: Partial<FlowchartData>) => {
+    if (!isFlowchart || !selectedElement) {
+      return;
+    }
+
+    const currentData = (selectedElement.props?.flowchartData as FlowchartData | undefined) ?? flowchartData;
+
+    const nextData: FlowchartData = {
+      ...currentData,
+      ...updates,
+      settings: updates.settings
+        ? { ...currentData.settings, ...updates.settings }
+        : currentData.settings,
+    };
+
+    onElementUpdate(selectedElement.id, {
+      props: {
+        ...selectedElement.props,
+        flowchartData: nextData,
+      },
+    });
+  }, [flowchartData, isFlowchart, onElementUpdate, selectedElement]);
+
+  const handleNodeUpdate = useCallback((nodeId: string, updates: Partial<FlowchartNode>) => {
+    if (!isFlowchart) return;
+
+    const updatedNodes = flowchartData.nodes.map(node =>
+      node.id === nodeId ? { ...node, ...updates } : node
+    );
+    handleFlowchartUpdate({ nodes: updatedNodes });
+  }, [flowchartData, handleFlowchartUpdate, isFlowchart]);
+
+  const handleConnectionUpdate = useCallback((connectionId: string, updates: Partial<FlowchartConnection>) => {
+    if (!isFlowchart) return;
+
+    const updatedConnections = flowchartData.connections.map(conn =>
+      conn.id === connectionId ? { ...conn, ...updates } : conn
+    );
+    handleFlowchartUpdate({ connections: updatedConnections });
+  }, [flowchartData, handleFlowchartUpdate, isFlowchart]);
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    if (!isFlowchart) return;
+
+    const updatedNodes = flowchartData.nodes.filter(node => node.id !== nodeId);
+    const updatedConnections = flowchartData.connections.filter(conn =>
+      conn.from !== nodeId && conn.to !== nodeId
+    );
+    handleFlowchartUpdate({
+      nodes: updatedNodes,
+      connections: updatedConnections,
+    });
+  }, [flowchartData, handleFlowchartUpdate, isFlowchart]);
+
+  const handleDeleteConnection = useCallback((connectionId: string) => {
+    if (!isFlowchart) return;
+
+    const updatedConnections = flowchartData.connections.filter(conn => conn.id !== connectionId);
+    handleFlowchartUpdate({ connections: updatedConnections });
+  }, [flowchartData, handleFlowchartUpdate, isFlowchart]);
+
+  if (!isFlowchart) {
     return (
       <div className="p-4 text-center text-gray-500">
         <GitBranch className="w-8 h-8 mx-auto mb-2 text-gray-300" />
@@ -44,59 +129,6 @@ export default function FlowchartPanel({ selectedElement, onElementUpdate }: Flo
       </div>
     );
   }
-
-  const flowchartData: FlowchartData = selectedElement.props?.flowchartData || {
-    nodes: [],
-    connections: [],
-    settings: {
-      gridSize: 20,
-      snapToGrid: true,
-      showGrid: true,
-      theme: 'light'
-    }
-  };
-
-  const handleFlowchartUpdate = useCallback((updates: Partial<FlowchartData>) => {
-    onElementUpdate(selectedElement.id, {
-      props: {
-        ...selectedElement.props,
-        flowchartData: {
-          ...flowchartData,
-          ...updates
-        }
-      }
-    });
-  }, [selectedElement, onElementUpdate, flowchartData]);
-
-  const handleNodeUpdate = useCallback((nodeId: string, updates: Partial<FlowchartNode>) => {
-    const updatedNodes = flowchartData.nodes.map(node => 
-      node.id === nodeId ? { ...node, ...updates } : node
-    );
-    handleFlowchartUpdate({ nodes: updatedNodes });
-  }, [flowchartData.nodes, handleFlowchartUpdate]);
-
-  const handleConnectionUpdate = useCallback((connectionId: string, updates: Partial<FlowchartConnection>) => {
-    const updatedConnections = flowchartData.connections.map(conn => 
-      conn.id === connectionId ? { ...conn, ...updates } : conn
-    );
-    handleFlowchartUpdate({ connections: updatedConnections });
-  }, [flowchartData.connections, handleFlowchartUpdate]);
-
-  const handleDeleteNode = useCallback((nodeId: string) => {
-    const updatedNodes = flowchartData.nodes.filter(node => node.id !== nodeId);
-    const updatedConnections = flowchartData.connections.filter(conn => 
-      conn.from !== nodeId && conn.to !== nodeId
-    );
-    handleFlowchartUpdate({ 
-      nodes: updatedNodes,
-      connections: updatedConnections
-    });
-  }, [flowchartData.nodes, flowchartData.connections, handleFlowchartUpdate]);
-
-  const handleDeleteConnection = useCallback((connectionId: string) => {
-    const updatedConnections = flowchartData.connections.filter(conn => conn.id !== connectionId);
-    handleFlowchartUpdate({ connections: updatedConnections });
-  }, [flowchartData.connections, handleFlowchartUpdate]);
 
   const renderSettingsTab = () => (
     <div className="space-y-4">
@@ -214,7 +246,7 @@ export default function FlowchartPanel({ selectedElement, onElementUpdate }: Flo
                       </span>
                     )}
                     <div className="text-xs text-gray-500">
-                      {node.type} • {node.width}×{node.height}
+                      {`${node.type} - ${node.width}x${node.height}`}
                     </div>
                   </div>
                 </div>
@@ -273,10 +305,10 @@ export default function FlowchartPanel({ selectedElement, onElementUpdate }: Flo
                   <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-medium text-gray-900">
-                      {fromNode?.label || 'Unknown'} → {toNode?.label || 'Unknown'}
+                      {`${fromNode?.label || 'Unknown'} -> ${toNode?.label || 'Unknown'}`}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {connection.type} • {connection.styles?.strokeWidth || 2}px
+                      {`${connection.type} - ${(connection.styles?.strokeWidth ?? 2)}px`}
                     </div>
                   </div>
                 </div>
@@ -330,3 +362,7 @@ export default function FlowchartPanel({ selectedElement, onElementUpdate }: Flo
     </div>
   );
 }
+
+
+
+

@@ -46,7 +46,7 @@ export default function TemplateShowcase({ onTemplateSelect, onClose }: Template
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h2 className="text-3xl font-bold text-gray-900">Choose a Template</h2>
-            <p className="text-gray-600 mt-1">Inspired by Squarespace's award-winning designs</p>
+            <p className="text-gray-600 mt-1">Inspired by Squarespace&apos;s award-winning designs</p>
           </div>
           <button
             onClick={onClose}

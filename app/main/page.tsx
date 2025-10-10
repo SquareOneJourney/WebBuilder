@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { DndProvider } from 'react-dnd';
@@ -199,114 +199,6 @@ export default function MainPage() {
     return () => clearTimeout(timeoutId);
   }, [flowchartState]);
 
-  const handleShortcut = (action: string) => {
-    switch (action) {
-      case 'save':
-        handleSave();
-        break;
-      case 'export':
-        handleExport();
-        break;
-      case 'undo':
-        handleUndo();
-        break;
-      case 'redo':
-        handleRedo();
-        break;
-      case 'zoomIn':
-        handleZoomIn();
-        break;
-      case 'zoomOut':
-        handleZoomOut();
-        break;
-      case 'resetZoom':
-        handleReset();
-        break;
-      case 'toggleGrid':
-        if (activeTab === 'webpage') {
-          setCanvasState(prev => ({
-            ...prev,
-            settings: { ...prev.settings, showGrid: !prev.settings.showGrid }
-          }));
-        } else {
-          setFlowchartState(prev => ({
-            ...prev,
-            showGrid: !prev.showGrid
-          }));
-        }
-        break;
-      case 'toggleRulers':
-        setCanvasState(prev => ({
-          ...prev,
-          settings: { ...prev.settings, showRulers: !prev.settings.showRulers }
-        }));
-        break;
-      case 'selectTool':
-        setSelectedTool('select');
-        break;
-      case 'textTool':
-        setSelectedTool('text');
-        break;
-      case 'buttonTool':
-        setSelectedTool('button');
-        break;
-      case 'imageTool':
-        setSelectedTool('image');
-        break;
-      case 'shapeTool':
-        setSelectedTool('rectangle');
-        break;
-      case 'showShortcuts':
-        setShowShortcuts(true);
-        break;
-      case 'deselect':
-        if (activeTab === 'webpage') {
-          setCanvasState(prev => ({ ...prev, selectedElementId: null }));
-        } else {
-          setFlowchartState(prev => ({ 
-            ...prev, 
-            selectedNodeId: null, 
-            selectedConnectionId: null 
-          }));
-        }
-        break;
-      case 'delete':
-        if (activeTab === 'webpage' && canvasState.selectedElementId) {
-          handleElementDelete(canvasState.selectedElementId);
-        }
-        break;
-      case 'duplicate':
-        if (activeTab === 'webpage' && canvasState.selectedElementId) {
-          handleElementDuplicate(canvasState.selectedElementId);
-        }
-        break;
-      case 'copy':
-        if (activeTab === 'webpage' && canvasState.selectedElementId) {
-          handleElementCopy(canvasState.selectedElementId);
-        }
-        break;
-      case 'paste':
-        if (activeTab === 'webpage') {
-          handleElementPaste();
-        }
-        break;
-      case 'selectAll':
-        if (activeTab === 'webpage') {
-          handleSelectAll();
-        }
-        break;
-      case 'desktopView':
-        setCanvasState(prev => ({ ...prev, viewport: 'desktop' }));
-        break;
-      case 'tabletView':
-        setCanvasState(prev => ({ ...prev, viewport: 'tablet' }));
-        break;
-      case 'mobileView':
-        setCanvasState(prev => ({ ...prev, viewport: 'mobile' }));
-        break;
-    }
-  };
-
   const addToHistory = useCallback((newState: CanvasState) => {
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newState);
@@ -395,41 +287,30 @@ export default function MainPage() {
   // Sub-Flowchart Navigation Handlers
   const handleNavigateToSubFlowchart = useCallback((nodeId: string) => {
     const node = flowchartState.nodes.find(n => n.id === nodeId);
-    if (node?.subFlowchart) {
-      // Save current main flowchart state if not already saved
-      if (!isInSubFlowchart) {
-        setMainFlowchartState(flowchartState);
-      }
-      
-      setCurrentFlowchartPath(prev => [...prev, node.label]);
-      setIsInSubFlowchart(true);
-      setCurrentSubFlowchartNodeId(nodeId);
-      
-      // Switch to the sub-flowchart data
-      setFlowchartState({
-        nodes: node.subFlowchart.nodes,
-        connections: node.subFlowchart.connections,
-        selectedNodeId: null,
-        selectedConnectionId: null,
-        zoom: 1,
-        gridSize: 20,
-        snapToGrid: true,
-        showGrid: true,
-        theme: 'light'
-      });
+    if (!node?.subFlowchart) {
+      return;
     }
-  }, [flowchartState.nodes, isInSubFlowchart]);
 
-  const handleNavigateBack = useCallback(() => {
-    if (currentFlowchartPath.length > 1) {
-      // Navigate back to parent flowchart
-      setCurrentFlowchartPath(prev => prev.slice(0, -1));
-      // For now, just go back to main flowchart
-      handleNavigateToMain();
-    } else {
-      handleNavigateToMain();
+    if (!isInSubFlowchart) {
+      setMainFlowchartState(flowchartState);
     }
-  }, [currentFlowchartPath]);
+
+    setCurrentFlowchartPath(prev => [...prev, node.label]);
+    setIsInSubFlowchart(true);
+    setCurrentSubFlowchartNodeId(nodeId);
+
+    setFlowchartState({
+      nodes: node.subFlowchart.nodes,
+      connections: node.subFlowchart.connections,
+      selectedNodeId: null,
+      selectedConnectionId: null,
+      zoom: 1,
+      gridSize: 20,
+      snapToGrid: true,
+      showGrid: true,
+      theme: 'light'
+    });
+  }, [flowchartState, isInSubFlowchart]);
 
   const handleNavigateToMain = useCallback(() => {
     setCurrentFlowchartPath([]);
@@ -448,6 +329,17 @@ export default function MainPage() {
       }));
     }
   }, [mainFlowchartState]);
+
+  const handleNavigateBack = useCallback(() => {
+    if (currentFlowchartPath.length > 1) {
+      // Navigate back to parent flowchart
+      setCurrentFlowchartPath(prev => prev.slice(0, -1));
+      // For now, just go back to main flowchart
+      handleNavigateToMain();
+    } else {
+      handleNavigateToMain();
+    }
+  }, [currentFlowchartPath, handleNavigateToMain]);
 
   const handleCreateSubFlowchart = useCallback((nodeId: string) => {
     const node = flowchartState.nodes.find(n => n.id === nodeId);
@@ -473,16 +365,6 @@ export default function MainPage() {
     }
   }, [flowchartState.nodes, handleNavigateToSubFlowchart]);
 
-  const handleElementMove = useCallback((id: string, x: number, y: number) => {
-    const newState = {
-      ...canvasState,
-      elements: canvasState.elements.map(el => 
-        el.id === id ? { ...el, x, y } : el
-      ),
-    };
-    setCanvasState(newState);
-  }, [canvasState]);
-
   const handleElementResize = useCallback((id: string, width: number, height: number) => {
     const newState = {
       ...canvasState,
@@ -503,37 +385,6 @@ export default function MainPage() {
     setCanvasState(newState);
     addToHistory(newState);
   }, [canvasState, addToHistory]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const shortcut = getShortcutsByKey(e.key, {
-        ctrl: e.ctrlKey,
-        shift: e.shiftKey,
-        alt: e.altKey,
-        meta: e.metaKey,
-      });
-
-      if (shortcut) {
-        e.preventDefault();
-        handleShortcut(shortcut.action);
-      }
-    };
-
-    // Handle custom delete events from canvas elements
-    const handleDeleteElement = (e: CustomEvent) => {
-      const { elementId } = e.detail;
-      handleElementDelete(elementId);
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('deleteElement', handleDeleteElement as EventListener);
-    
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('deleteElement', handleDeleteElement as EventListener);
-    };
-  }, [canvasState, historyIndex, history, handleElementDelete]);
 
   const handleElementDuplicate = useCallback((id: string) => {
     const element = canvasState.elements.find(el => el.id === id);
@@ -705,25 +556,76 @@ export default function MainPage() {
   }, [canvasState, projectSettings]);
 
   const handleExport = useCallback(() => {
-    const exportOptions: ExportOptions = {
-      format: 'html',
-      minify: false,
-      includeCSS: true,
-      includeJS: true,
-      responsive: true,
-      seo: true,
-      analytics: false,
-    };
-    
-    const html = exportProject(canvasState, projectSettings, exportOptions);
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'website.html';
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [canvasState, projectSettings]);
+    if (activeTab === 'flowchart') {
+      // Show flowchart export options
+      const exportType = prompt('Choose export format:\n1. SVG Image\n2. JSON Data\n\nEnter 1 or 2:');
+      
+      if (exportType === '1') {
+        // Export as SVG
+        const { exportFlowchartSVG } = require('@/lib/export');
+        const svg = exportFlowchartSVG(flowchartState.nodes, flowchartState.connections, {
+          gridSize: flowchartState.gridSize,
+          snapToGrid: flowchartState.snapToGrid,
+          showGrid: flowchartState.showGrid,
+          theme: flowchartState.theme
+        });
+        
+        const blob = new Blob([svg], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'flowchart.svg';
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        setToastMessage('Flowchart exported as SVG!');
+        setTimeout(() => setToastMessage(null), 2000);
+      } else if (exportType === '2') {
+        // Export as JSON
+        const { exportFlowchartJSON } = require('@/lib/export');
+        const json = exportFlowchartJSON(flowchartState.nodes, flowchartState.connections, {
+          gridSize: flowchartState.gridSize,
+          snapToGrid: flowchartState.snapToGrid,
+          showGrid: flowchartState.showGrid,
+          theme: flowchartState.theme
+        });
+        
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'flowchart.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        setToastMessage('Flowchart exported as JSON!');
+        setTimeout(() => setToastMessage(null), 2000);
+      }
+    } else {
+      // Export webpage
+      const exportOptions: ExportOptions = {
+        format: 'html',
+        minify: false,
+        includeCSS: true,
+        includeJS: true,
+        responsive: true,
+        seo: true,
+        analytics: false,
+      };
+      
+      const html = exportProject(canvasState, projectSettings, exportOptions);
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'website.html';
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      setToastMessage('Website exported as HTML!');
+      setTimeout(() => setToastMessage(null), 2000);
+    }
+  }, [activeTab, canvasState, projectSettings, flowchartState]);
 
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
@@ -762,6 +664,162 @@ export default function MainPage() {
       setFlowchartState(prev => ({ ...prev, zoom: 1 }));
     }
   }, [activeTab]);
+
+  const handleShortcut = useCallback((action: string) => {
+    switch (action) {
+      case 'save':
+        handleSave();
+        break;
+      case 'export':
+        handleExport();
+        break;
+      case 'undo':
+        handleUndo();
+        break;
+      case 'redo':
+        handleRedo();
+        break;
+      case 'zoomIn':
+        handleZoomIn();
+        break;
+      case 'zoomOut':
+        handleZoomOut();
+        break;
+      case 'resetZoom':
+        handleReset();
+        break;
+      case 'toggleGrid':
+        if (activeTab === 'webpage') {
+          setCanvasState(prev => ({
+            ...prev,
+            settings: { ...prev.settings, showGrid: !prev.settings.showGrid }
+          }));
+        } else {
+          setFlowchartState(prev => ({
+            ...prev,
+            showGrid: !prev.showGrid
+          }));
+        }
+        break;
+      case 'toggleRulers':
+        setCanvasState(prev => ({
+          ...prev,
+          settings: { ...prev.settings, showRulers: !prev.settings.showRulers }
+        }));
+        break;
+      case 'selectTool':
+        setSelectedTool('select');
+        break;
+      case 'textTool':
+        setSelectedTool('text');
+        break;
+      case 'buttonTool':
+        setSelectedTool('button');
+        break;
+      case 'imageTool':
+        setSelectedTool('image');
+        break;
+      case 'shapeTool':
+        setSelectedTool('rectangle');
+        break;
+      case 'showShortcuts':
+        setShowShortcuts(true);
+        break;
+      case 'deselect':
+        if (activeTab === 'webpage') {
+          setCanvasState(prev => ({ ...prev, selectedElementId: null }));
+        } else {
+          setFlowchartState(prev => ({
+            ...prev,
+            selectedNodeId: null,
+            selectedConnectionId: null
+          }));
+        }
+        break;
+      case 'delete':
+        if (activeTab === 'webpage' && canvasState.selectedElementId) {
+          handleElementDelete(canvasState.selectedElementId);
+        }
+        break;
+      case 'duplicate':
+        if (activeTab === 'webpage' && canvasState.selectedElementId) {
+          handleElementDuplicate(canvasState.selectedElementId);
+        }
+        break;
+      case 'copy':
+        if (activeTab === 'webpage' && canvasState.selectedElementId) {
+          handleElementCopy(canvasState.selectedElementId);
+        }
+        break;
+      case 'paste':
+        if (activeTab === 'webpage') {
+          handleElementPaste();
+        }
+        break;
+      case 'selectAll':
+        if (activeTab === 'webpage') {
+          handleSelectAll();
+        }
+        break;
+      case 'desktopView':
+        setCanvasState(prev => ({ ...prev, viewport: 'desktop' }));
+        break;
+      case 'tabletView':
+        setCanvasState(prev => ({ ...prev, viewport: 'tablet' }));
+        break;
+      case 'mobileView':
+        setCanvasState(prev => ({ ...prev, viewport: 'mobile' }));
+        break;
+    }
+  }, [
+    activeTab,
+    canvasState.selectedElementId,
+    handleSave,
+    handleExport,
+    handleUndo,
+    handleRedo,
+    handleZoomIn,
+    handleZoomOut,
+    handleReset,
+    setCanvasState,
+    setFlowchartState,
+    setSelectedTool,
+    setShowShortcuts,
+    handleElementDelete,
+    handleElementDuplicate,
+    handleElementCopy,
+    handleElementPaste,
+    handleSelectAll,
+  ]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const shortcut = getShortcutsByKey(e.key, {
+        ctrl: e.ctrlKey,
+        shift: e.shiftKey,
+        alt: e.altKey,
+        meta: e.metaKey,
+      });
+
+      if (shortcut) {
+        e.preventDefault();
+        handleShortcut(shortcut.action);
+      }
+    };
+
+    const handleDeleteElement = (e: CustomEvent) => {
+      const { elementId } = e.detail;
+      handleElementDelete(elementId);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('deleteElement', handleDeleteElement as EventListener);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('deleteElement', handleDeleteElement as EventListener);
+    };
+  }, [handleShortcut, handleElementDelete]);
 
 
   return (
@@ -826,7 +884,7 @@ export default function MainPage() {
         <div className="flex flex-1 overflow-hidden min-w-0">
           {activeTab === 'webpage' ? (
             <>
-              <div className="hidden md:block">
+              <div className="hidden md:flex h-full">
                 <SidePanel
                 selectedTool={selectedTool}
                 onToolSelect={handleToolSelect}
@@ -853,8 +911,14 @@ export default function MainPage() {
                   onElementSelect={handleElementSelect}
                   onElementAdd={handleElementAddDrop}
                   onElementUpdate={handleElementUpdate}
-                  onElementMove={handleElementMove}
                   onElementResize={handleElementResize}
+                  zoom={canvasState.zoom}
+                  showGrid={canvasState.settings.showGrid}
+                  showRulers={canvasState.settings.showRulers}
+                  gridSize={canvasState.grid.size}
+                  snapToGrid={canvasState.grid.snap}
+                  viewport={canvasState.viewport}
+                  canvasHeight={canvasState.canvasHeight}
                 />
               </div>
               <div className="hidden lg:block">
@@ -895,8 +959,9 @@ export default function MainPage() {
                 <button
                   onClick={() => setShowShortcuts(false)}
                   className="text-gray-500 hover:text-gray-700"
+                  aria-label="Close"
                 >
-                  ✕
+                  ×
                 </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -927,3 +992,5 @@ export default function MainPage() {
     </DndProvider>
   );
 }
+
+
