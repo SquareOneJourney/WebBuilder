@@ -45,7 +45,7 @@ export default function SectionBuilder({
   const [sectionsData, setSectionsData] = useState<SectionData[]>([]);
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
   const [isDraggingSection, setIsDraggingSection] = useState(false);
-  const canvasRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
 
   // Convert elements to sections data
   const updateSectionsData = useCallback(() => {

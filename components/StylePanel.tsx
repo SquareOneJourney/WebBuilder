@@ -128,6 +128,11 @@ export default function StylePanel({ selectedElement, onElementUpdate }: StylePa
     );
   }
 
+  const getSelectedContent = () =>
+    (typeof selectedElement.content === 'object' && selectedElement.content !== null
+      ? selectedElement.content
+      : {});
+
   const updateAccordionContent = (mutator: (draft: AccordionContent) => void) => {
     if (!selectedElement || !accordionData) return;
     const draft = cloneAccordionContent(accordionData.content);
@@ -154,7 +159,7 @@ export default function StylePanel({ selectedElement, onElementUpdate }: StylePa
     if (!selectedElement || selectedElement.type !== 'heading') return;
     onElementUpdate(selectedElement.id, {
       content: {
-        ...selectedElement.content,
+        ...getSelectedContent(),
         ...updates
       }
     });
@@ -175,7 +180,7 @@ export default function StylePanel({ selectedElement, onElementUpdate }: StylePa
     if (!selectedElement || selectedElement.type !== 'paragraph') return;
     onElementUpdate(selectedElement.id, {
       content: {
-        ...selectedElement.content,
+        ...getSelectedContent(),
         ...updates
       }
     });
@@ -1000,15 +1005,20 @@ export default function StylePanel({ selectedElement, onElementUpdate }: StylePa
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Features</label>
               <div className="space-y-2">
-                {cardData.features.map((feature, index) => (
+                {(cardData.features ?? []).map((feature, index) => (
                   <div key={feature.id} className="flex gap-2">
                     <input
                       type="text"
                       value={feature.label}
                       onChange={(e) => updateCardContent((draft) => {
-                        const featureIndex = draft.features.findIndex(f => f.id === feature.id);
+                        const features = draft.features ?? [];
+                        const featureIndex = features.findIndex(f => f.id === feature.id);
                         if (featureIndex >= 0) {
-                          draft.features[featureIndex].label = e.target.value;
+                          features[featureIndex] = {
+                            ...features[featureIndex],
+                            label: e.target.value
+                          };
+                          draft.features = features;
                         }
                       })}
                       className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded"
@@ -1017,7 +1027,8 @@ export default function StylePanel({ selectedElement, onElementUpdate }: StylePa
                     <button
                       type="button"
                       onClick={() => updateCardContent((draft) => {
-                        draft.features = draft.features.filter(f => f.id !== feature.id);
+                        const nextFeatures = (draft.features ?? []).filter(f => f.id !== feature.id);
+                        draft.features = nextFeatures;
                       })}
                       className="px-2 py-1 text-xs text-red-600 hover:text-red-700"
                     >
@@ -1028,12 +1039,13 @@ export default function StylePanel({ selectedElement, onElementUpdate }: StylePa
                 <button
                   type="button"
                   onClick={() => updateCardContent((draft) => {
+                    const currentFeatures = draft.features ?? [];
                     const newFeature = {
                       id: `feature-${Date.now()}`,
-                      label: `Feature ${draft.features.length + 1}`,
+                      label: `Feature ${currentFeatures.length + 1}`,
                       description: ""
                     };
-                    draft.features.push(newFeature);
+                    draft.features = [...currentFeatures, newFeature];
                   })}
                   className="text-xs text-blue-600 hover:text-blue-700"
                 >

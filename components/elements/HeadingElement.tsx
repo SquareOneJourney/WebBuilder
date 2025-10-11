@@ -19,11 +19,13 @@ export default function HeadingElement({ element, onUpdate, isSelected }: Headin
   const fluidTypography = buildFluidTypography(config.typography);
   
   const Tag = `h${config.content.level}` as keyof JSX.IntrinsicElements;
+  const getSafeContent = () =>
+    (typeof element.content === 'object' && element.content !== null ? element.content : {});
   
   const handleTextChange = (newText: string) => {
     onUpdate(element.id, {
       content: {
-        ...element.content,
+        ...getSafeContent(),
         text: newText,
         level: config.content.level
       }
@@ -33,7 +35,7 @@ export default function HeadingElement({ element, onUpdate, isSelected }: Headin
   const handleLevelChange = (newLevel: HeadingLevel) => {
     onUpdate(element.id, {
       content: {
-        ...element.content,
+        ...getSafeContent(),
         text: config.content.text,
         level: newLevel
       }

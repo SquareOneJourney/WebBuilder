@@ -51,7 +51,7 @@ export interface ElementStyles {
   borderColor?: string;
   
   // Typography
-  fontSize?: number;
+  fontSize?: number | string;
   fontFamily?: string;
   fontWeight?: string | number;
   fontStyle?: 'normal' | 'italic' | 'oblique';
@@ -69,6 +69,8 @@ export interface ElementStyles {
   minHeight?: number | string;
   maxWidth?: number | string;
   maxHeight?: number | string;
+  objectFit?: 'fill' | 'contain' | 'cover' | 'none' | 'scale-down';
+  objectPosition?: string;
   
   // Spacing
   padding?: number | string;
@@ -266,6 +268,7 @@ export interface ElementMetadata {
   description?: string;
   tags?: string[];
   category?: string;
+  sectionId?: string;
   version?: string;
   created?: string;
   modified?: string;

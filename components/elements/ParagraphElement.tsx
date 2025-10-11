@@ -17,11 +17,13 @@ interface ParagraphElementProps {
 export default function ParagraphElement({ element, onUpdate, isSelected }: ParagraphElementProps) {
   const config = sanitizeParagraphElement(element.content, element.props);
   const fluidTypography = buildFluidTypography(config.typography);
+  const getSafeContent = () =>
+    (typeof element.content === 'object' && element.content !== null ? element.content : {});
   
   const handleTextChange = (newText: string) => {
     onUpdate(element.id, {
       content: {
-        ...element.content,
+        ...getSafeContent(),
         text: newText,
         variant: config.content.variant
       }
@@ -31,7 +33,7 @@ export default function ParagraphElement({ element, onUpdate, isSelected }: Para
   const handleVariantChange = (newVariant: ParagraphVariant) => {
     onUpdate(element.id, {
       content: {
-        ...element.content,
+        ...getSafeContent(),
         text: config.content.text,
         variant: newVariant
       }
