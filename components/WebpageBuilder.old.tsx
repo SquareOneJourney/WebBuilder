@@ -739,13 +739,13 @@ export default function WebpageBuilder({
         {isSelected && canvasMode === 'canvas' && (
           <>
             {/* Resize Handles */}
-            <div className="absolute -top-1 -left-1 w-3 h-3 bg-blue-500 border border-white rounded-full cursor-nw-resize"
+            <div className="absolute -top-1 -left-1 w-3 h-3  border border-white rounded-full cursor-nw-resize"
                  onMouseDown={(e) => handleMouseDown(e, element.id, 'resize')} />
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 border border-white rounded-full cursor-ne-resize"
+            <div className="absolute -top-1 -right-1 w-3 h-3  border border-white rounded-full cursor-ne-resize"
                  onMouseDown={(e) => handleMouseDown(e, element.id, 'resize')} />
-            <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-500 border border-white rounded-full cursor-sw-resize"
+            <div className="absolute -bottom-1 -left-1 w-3 h-3  border border-white rounded-full cursor-sw-resize"
                  onMouseDown={(e) => handleMouseDown(e, element.id, 'resize')} />
-            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 border border-white rounded-full cursor-se-resize"
+            <div className="absolute -bottom-1 -right-1 w-3 h-3  border border-white rounded-full cursor-se-resize"
                  onMouseDown={(e) => handleMouseDown(e, element.id, 'resize')} />
             
             {/* Floating Toolbar */}
